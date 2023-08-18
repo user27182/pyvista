@@ -420,6 +420,142 @@ class ImageDataFilters(DataSetFilters):
         _update_alg(alg, progress_bar, 'Performing Image Thresholding')
         return _get_output(alg)
 
+    def split_image_labels(
+        self,
+        label_names: dict = None,
+        excluded_labels=0,
+        boolean_output=True,
+        progress_bar=False,
+        label_names_filter=True,
+    ):
+        """Split segmented image labels.
+
+        This filter uses image thresholding to split each label into
+        separate binary images. The binary images are stored as blocks
+        in a :class:`pyvista.MultiBlock` dataset.
+
+        Parameters
+        ----------
+        label_names : dict, optional
+            Dictionary that maps each label's scalar value to its name.
+            If set, ``label_names`` will be used to name each block of
+            the output. This is useful for indexing the multiblock by
+            label name.
+            By default, if ``label_names`` is not specified or if a label
+            is present in the image for which a key does not exist, a
+            generic label of ``label-#`` is given where ``#`` is the label
+            number.
+            Note: dictionary keys for labels not present in the image or
+            specified in ``excluded_labels`` are ignored and not used.
+
+        label_names_filter : bool, default: True
+            If ``True``, any keys not specified in ``label_names`` are
+            automatically excluded from the output. This parameter has
+            no effect if ``label_names`` is ``None``.
+
+        excluded_labels : int or sequence[int], optional, default: 0
+            Label number or a sequence of label numbers to exclude from
+            the dataset. Excluded labels will not be present in the output.
+            By default, values of ``0`` are assumed as background and are
+            excluded.
+            Note: any excluded labels which are not present in the image
+            are ignored and not used.
+
+        boolean_output : bool, default: True
+            If ``True``, the split binarized images will have boolean
+            scalars, i.e. ``True`` and ``False`` values.
+            If ``False``, the split binarized images will have integer
+            scalars with a foreground value equal to its label number and
+            a background value of 0.
+            Note: Setting `False` will produce an image of zeros for the
+            special case where a label number is ``0`` (i.e. background
+            values). Therefore, set this this value to `True` (and ensure
+            ``0`` is not included in ``excluded_labels``) to extract
+            the image background as a binary image.
+
+        progress_bar : bool, default: False
+            Display a progress bar to indicate progress.
+
+        Returns
+        -------
+        pyvista.MultiBlock
+            MultiBlock of ImageData with split labels.
+
+        Examples
+        --------
+
+        """
+
+        # Check that we have integer scalars
+        def is_all_integers(x):
+            return np.all(np.mod(x, 1) == 0)
+
+        set_default_active_scalars(self)
+        label_scalars = self.active_scalars
+        label_numbers = np.unique(label_scalars)
+        if not is_all_integers(label_numbers):
+            raise ValueError("Scalar values must be integer values.")
+        label_numbers = label_numbers.astype(int)
+
+        # Process label names and filter as needed
+        filtered_labels = set()
+        if label_names is None:
+            # Use the number as the name
+            keys = label_numbers
+            vals = np.char.add('label-', label_numbers.astype(str))
+            label_names = dict(zip(keys, vals))
+        else:
+            if not isinstance(label_names, dict):
+                raise TypeError("Label names must be dictionary-like.")
+            # Check that each label number has a key entry
+            keys = list(label_names.keys())
+            for num in label_numbers:
+                if num not in keys:
+                    if label_names_filter:
+                        filtered_labels.add(num)
+                    else:
+                        label_names[num] = f'label-{num}'
+
+        # Remove any excluded labels
+        if excluded_labels is None:
+            excluded_labels = set()
+        else:
+            excluded_labels = np.asarray(excluded_labels)
+            if excluded_labels.ndim == 0:
+                # Ensure we can iterate over variable
+                excluded_labels = np.reshape(excluded_labels, (1,))
+            elif excluded_labels.ndim > 1:
+                raise ValueError("Excluded labels must be one-dimensional or a single value.")
+            if not is_all_integers(excluded_labels):
+                raise ValueError("Excluded labels must be integer values.")
+
+        label_numbers = np.array(list(
+            set(label_numbers) - set(excluded_labels) - set(filtered_labels)
+        ))
+        if len(label_numbers) == 0:
+            # nothing to process
+            return pyvista.MultiBlock()
+
+        # Separate the labels
+        block = pyvista.MultiBlock()
+        scalars_name = self.active_scalars_name
+        for num in label_numbers:
+            # handle background case
+            if num == 0 and boolean_output:
+                in_val = 1
+            else:
+                in_val = num
+
+            b = self.image_threshold(
+                [num, num], in_value=in_val, out_value=0, progress_bar=progress_bar
+            )
+
+            if boolean_output:
+                b[scalars_name] = b[scalars_name].astype(bool)
+            block.append(b, name=label_names[num])
+
+        return block
+
     def fft(self, output_scalars_name=None, progress_bar=False):
         """Apply a fast Fourier transform (FFT) to the active scalars.
 

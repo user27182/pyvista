@@ -2115,6 +2115,141 @@ def test_image_threshold_between(in_value, out_value):
     )
 
 
+@pytest.fixture
+def image_labels_multi():
+    image = pyvista.ImageData(dimensions=(2, 2, 2))
+    image['labels'] = [0, 0, 1, 1, 2, 2, 3, 3]
+    return image
+
+
+@pytest.fixture
+def image_labels_binary():
+    image = pyvista.ImageData(dimensions=(2, 2, 2))
+    image['labels'] = [0, 0, 0, 0, 1, 1, 1, 1]
+    return image
+
+
+@pytest.mark.parametrize('image_labels_fixture', ['image_labels_binary', 'image_labels_multi'])
+def test_split_image_labels_correct_output(image_labels_fixture, request):
+    image_labels = request.getfixturevalue(image_labels_fixture)
+    block = image_labels.split_image_labels()
+
+    # test correct number of splits
+    expected_labels = np.unique(image_labels['labels'])
+    # background is excluded by default
+    expected_labels = expected_labels[np.where(expected_labels != 0)]
+    assert block.n_blocks == len(expected_labels)
+
+    # test correct scalars
+    for i, b in enumerate(block):
+        expected = image_labels['labels'] == expected_labels[i]
+        actual = b['labels']
+        assert np.array_equal(actual, expected)
+
+
+def test_split_image_labels_active_scalars(image_labels_binary):
+    block = image_labels_binary.split_image_labels()
+    assert block[0].active_scalars_name is not None
+
+
+def test_split_image_labels_non_integer_input(image_labels_multi):
+    image_labels_multi['labels'] = image_labels_multi['labels'] * 1.5
+    with pytest.raises(ValueError):
+        image_labels_multi.split_image_labels()
+
+
+def test_split_image_labels_boolean_output(image_labels_binary):
+    image_labels_binary['labels'] = image_labels_binary['labels'] * 2
+
+    # test correct type
+    block = image_labels_binary.split_image_labels(boolean_output=True)
+    assert block[0].active_scalars.dtype == bool
+    assert np.array_equal(np.unique(block[0].active_scalars), [False, True])
+
+    block = image_labels_binary.split_image_labels(boolean_output=False)
+    assert block[0].active_scalars.dtype == int
+    assert np.array_equal(np.unique(block[0].active_scalars), [0, 2])
+
+    # test get background returns empty
+    block = image_labels_binary.split_image_labels(boolean_output=False, excluded_labels=1)
+    assert np.array_equal(np.unique(block[0]['labels']), [0])
+
+    # test get background returns mask
+    block = image_labels_binary.split_image_labels(boolean_output=True, excluded_labels=1)
+    assert np.array_equal(np.unique(block[0]['labels']), [0, 1])
+    assert np.array_equal(block[0]['labels'], [1, 1, 1, 1, 0, 0, 0, 0])
+
+
+def test_split_image_labels_label_names(image_labels_multi, image_labels_binary):
+    # test default label names
+    block = image_labels_multi.split_image_labels()
+    assert np.array_equal(block['label-1']['labels'], [0, 0, 1, 1, 0, 0, 0, 0])
+    assert np.array_equal(block['label-2']['labels'], [0, 0, 0, 0, 1, 1, 0, 0])
+    assert np.array_equal(block['label-3']['labels'], [0, 0, 0, 0, 0, 0, 1, 1])
+
+    label_names = {0: 'a', 1: 'b', 2: 'c', 3: 'd'}
+    block = image_labels_multi.split_image_labels(
+        label_names=label_names, boolean_output=False, excluded_labels=None
+    )
+    assert np.array_equal(block['a']['labels'], [0, 0, 0, 0, 0, 0, 0, 0])
+    assert np.array_equal(block['b']['labels'], [0, 0, 1, 1, 0, 0, 0, 0])
+    assert np.array_equal(block['c']['labels'], [0, 0, 0, 0, 2, 2, 0, 0])
+    assert np.array_equal(block['d']['labels'], [0, 0, 0, 0, 0, 0, 3, 3])
+
+    # test accessing excluded data
+    with pytest.raises(KeyError):
+        image_labels_multi.split_image_labels(label_names=label_names, excluded_labels=1)['b']
+
+    # test bad input
+    with pytest.raises(TypeError):
+        image_labels_multi.split_image_labels(label_names=1)
+
+
+def test_label_names_filter(image_labels_multi):
+    # test missing key
+    block = image_labels_multi.split_image_labels(
+        label_names={1: 'b', 2: 'c'}, label_names_filter=True
+    )
+    assert len(block) == 2
+    assert np.array_equal(block['b']['labels'], [0, 0, 1, 1, 0, 0, 0, 0])
+    assert np.array_equal(block['c']['labels'], [0, 0, 0, 0, 1, 1, 0, 0])
+
+    block = image_labels_multi.split_image_labels(
+        label_names={1: 'b', 2: 'c'}, label_names_filter=False
+    )
+    assert len(block) == 3
+    assert np.array_equal(block['b']['labels'], [0, 0, 1, 1, 0, 0, 0, 0])
+    assert np.array_equal(block['c']['labels'], [0, 0, 0, 0, 1, 1, 0, 0])
+    assert np.array_equal(block['label-3']['labels'], [0, 0, 0, 0, 0, 0, 1, 1])
+
+
+def test_split_image_labels_excluded_labels(image_labels_multi):
+    block = image_labels_multi.split_image_labels(excluded_labels=[0, 1, 2, 3])
+    assert block.n_blocks == 0
+
+    block = image_labels_multi.split_image_labels(excluded_labels=[0, 1], boolean_output=False)
+    assert block.n_blocks == 2
+    assert np.array_equal(block[0]['labels'], [0, 0, 0, 0, 2, 2, 0, 0])
+    assert np.array_equal(block[1]['labels'], [0, 0, 0, 0, 0, 0, 3, 3])
+
+    # test correct number of splits
+    expected_labels = [1, 2, 3]
+    block = image_labels_multi.split_image_labels()
+    assert block.n_blocks == len(expected_labels)
+
+    # test correct scalars
+    for i, b in enumerate(block):
+        expected = image_labels_multi['labels'] == expected_labels[i]
+        actual = b.active_scalars
+        assert np.array_equal(actual, expected)
+
+    # test bad input
+    with pytest.raises(ValueError):
+        image_labels_multi.split_image_labels(excluded_labels=1.5)
+    with pytest.raises(ValueError):
+        image_labels_multi.split_image_labels(excluded_labels=[[0, 1], [0, 2]])
+
+
 def test_extract_subset_structured():
     structured = examples.load_structured()
     voi = structured.extract_subset([0, 3, 1, 4, 0, 1])
