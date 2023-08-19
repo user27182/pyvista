@@ -5815,6 +5815,119 @@ class DataSetFilters:
         _update_alg(alg, progress_bar, 'Extracting cell types')
         return _get_output(alg)
 
+    def sort_labels(
+        self,
+        scalars=None,
+        overwrite_scalars=True,
+        preference='point',
+        progress_bar=False,
+        inplace=False,
+    ):
+        """Sort labeled data by number of points or cells.
+
+        This filter renumbers scalar label data of any type with ``N`` labels
+        such that the output labels are contiguous from ``[0, N)`` and
+        sorted in descending order from largest to smallest. I.e., the
+        largest label will have a value of ``0`` and the smallest label
+        will have a value of ``N-1``.
+
+        scalars : str, optional
+            Name of scalars to sort. Defaults to currently active scalars.
+
+        preference : str, default: "point"
+            When ``scalars`` is specified, this is the preferred array
+            type to search for in the dataset.  Must be either
+            ``'point'`` or ``'cell'``.
+
+        overwrite_scalars: bool, default: True
+            If ``True``, the input scalars are overwritten and replaced
+            with the sorted scalars. Otherwise, a new array ``'sorted_labels'``
+            is added to the mesh.
+
+        progress_bar : bool, default: False
+            If ``True``, display a progress bar.
+
+        inplace : bool, default: False
+            If ``True``, the mesh is updated in-place.
+
+        Returns
+        -------
+        pyvista.Dataset
+            Dataset with sorted labels.
+
+        Examples
+        --------
+        Sort segmented image labels.
+
+        # Load image labels
+        >>> from pyvista.examples.downloads import (
+        ...     download_file,
+        ...     _download_and_read,
+        ... )
+        >>> _ = download_file('froggy/frogtissue.zraw')
+        >>> _ = image_labels = _download_and_read('froggy/frogtissue.mhd')
+
+        # Show label info for first four labels
+        >>> label_number, label_size = np.unique(
+        ...     image_labels['MetaImage'], return_counts=True
+        ... )
+        >>> label_number[:4]
+        pyvista_ndarray([0, 1, 2, 3], dtype=uint8)
+        >>> label_size[:4]
+        array([30805713,    35279,    19172,    38129], dtype=int64)
+
+        # Sort labels
+        >>> sorted_labels = image_labels.sort_labels()
+
+        # Show sorted label info for the four largest labels
+        >>> sorted_label_number, sorted_label_size = np.unique(
+        ...     sorted_labels["MetaImage"], return_counts=True
+        ... )
+        >>> sorted_label_number[:4]
+        pyvista_ndarray([0, 1, 2, 3], dtype=uint8)
+        >>> sorted_label_size[:4]
+        array([30805713,   438052,   204672,   133880], dtype=int64)
+        """
+        if scalars is None:
+            set_default_active_scalars(self)
+            _, scalars = self.active_scalars_info
+        arr = get_array(self, scalars, preference=preference, err=False)
+        if arr is None:
+            raise ValueError('No arrays present to sort.')
+
+        field = get_array_association(self, scalars, preference=preference)
+
+        alg = _vtk.vtkPackLabels()
+        alg.SetInputDataObject(self)
+        alg.SetInputArrayToProcess(0, 0, 0, field.value, scalars)
+        alg.SortByLabelCount()
+        # vtkPackLabels does not always pass data correctly and will sometimes
+        # replace input data. Instead, turn off data passing and copy the output later
+        alg.PassFieldDataOff()
+        alg.PassCellDataOff()
+        alg.PassPointDataOff()
+        _update_alg(alg, progress_bar, 'Sorting')
+        sorted_array = _get_output(alg)['PackedLabels']
+
+        # Determine scalar name
+        if overwrite_scalars:
+            output_scalars = scalars
+        else:
+            output_scalars = 'sorted_labels'
+
+        if inplace:
+            result = self
+        else:
+            result = self.copy()
+
+        # Add output to mesh
+        if preference == 'point':
+            try:
+                result.point_data[output_scalars] = sorted_array
+            except:
+                result.cell_data[output_scalars] = sorted_array
+        return result
+
 
 def _set_threshold_limit(alg, value, method, invert):
     """Set vtkThreshold limits and function.
