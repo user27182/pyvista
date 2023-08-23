@@ -1,5 +1,6 @@
 """Filters with a class to manage filters/algorithms for uniform grid datasets."""
 import collections.abc
+import numbers
 
 import numpy as np
 
@@ -8,7 +9,12 @@ from pyvista.core import _vtk_core as _vtk
 from pyvista.core.errors import AmbiguousDataError, MissingDataError
 from pyvista.core.filters import _get_output, _update_alg
 from pyvista.core.filters.data_set import DataSetFilters
-from pyvista.core.utilities.arrays import set_default_active_scalars
+from pyvista.core.utilities.arrays import (
+    FieldAssociation,
+    get_array,
+    get_array_association,
+    set_default_active_scalars,
+)
 from pyvista.core.utilities.helpers import wrap
 from pyvista.core.utilities.misc import abstract_class
 
@@ -422,139 +428,210 @@ class ImageDataFilters(DataSetFilters):
 
     def split_image_labels(
         self,
-        label_names: dict = None,
-        excluded_labels=0,
-        boolean_output=True,
+        label_values=None,
+        background_value=0,
+        as_binary_mask=False,
         progress_bar=False,
-        label_names_filter=True,
+        as_composite=False,
+        scalars=None,
+        preference='point',
+        inplace=False,
     ):
-        """Split segmented image labels.
+        """Split image labels.
 
-        This filter uses image thresholding to split each label into
-        separate binary images. The binary images are stored as blocks
-        in a :class:`pyvista.MultiBlock` dataset.
+        This filter uses image thresholding to split label data into separate
+        scalar arrays or separate images in a :class:`pyvista.MultiBlock` dataset.
+        Data can be split from all labels present in the input, or can be
+        filtered to only split specific label values or scalar ranges of
+        interest.
+
+        A dictionary with label names can also be used to enable indexing
+        the split labels by name.
+
+        Note: The background label (i.e. label value equal to ``background_value``)
+        is always excluded from the output unless ``as_bool`` is ``True``.
+
 
         Parameters
         ----------
-        label_names : dict, optional
-            Dictionary that maps each label's scalar value to its name.
-            If set, ``label_names`` will be used to name each block of
-            the output. This is useful for indexing the multiblock by
-            label name.
-            By default, if ``label_names`` is not specified or if a label
-            is present in the image for which a key does not exist, a
-            generic label of ``label-#`` is given where ``#`` is the label
-            number.
-            Note: dictionary keys for labels not present in the image or
-            specified in ``excluded_labels`` are ignored and not used.
+        label_values : float | sequence[float] | sequence[float |
+        sequence[float]] | dict[str, float | sequence[float]], optional
+            Label values to split. Can be a sequence of values and/or
+            ranges, or can be a dictionary that maps each label's name
+            to its scalar value and/or range. Ranges are specified as
+            ``[min, max)``.
+            If type is ``dict``, the keys (i.e. label names) will also be
+            used to name each split label.
+            When ``label_values`` is set, only the specified labels are
+            included in the split output (if present in the input), and
+            all other label values are ignored.
+            If not specified or if type is not ``dict``, then split labels
+            are given a generic label name ``label-#`` for single values
+            where ``#`` is the label value or range.
+            If omitted, then all unique label values are split as separate
+            outputs by default.
 
-        label_names_filter : bool, default: True
-            If ``True``, any keys not specified in ``label_names`` are
-            automatically excluded from the output. This parameter has
-            no effect if ``label_names`` is ``None``.
+        background_value : int, default: 0
+            Background value of the input and split images. Has no effect
+            on split images if ``as_binary_mask`` is set.
 
-        excluded_labels : int or sequence[int], optional, default: 0
-            Label number or a sequence of label numbers to exclude from
-            the dataset. Excluded labels will not be present in the output.
-            By default, values of ``0`` are assumed as background and are
-            excluded.
-            Note: any excluded labels which are not present in the image
-            are ignored and not used.
+        as_binary_mask : bool, default: False
+            If ``True``, the split labels will be binary masks with ``1``
+            foreground and ``0`` background values..
 
-        boolean_output : bool, default: True
-            If ``True``, the split binarized images will have boolean
-            scalars, i.e. ``True`` and ``False`` values.
-            If ``False``, the split binarized images will have integer
-            scalars with a foreground value equal to its label number and
-            a background value of 0.
-            Note: Setting `False` will produce an image of zeros for the
-            special case where a label number is ``0`` (i.e. background
-            values). Therefore, set this this value to `True` (and ensure
-            ``0`` is not included in ``excluded_labels``) to extract
-            the image background as a binary image.
+        as_composite : bool, default : False
+            Return the split labels as a :class:`pyvista.MultiBlock`.
+
+        scalars : str, optional
+            Name of scalars to split. Defaults to currently active scalars.
+
+        preference : str, default: "point"
+            When ``scalars`` is specified, this is the preferred array
+            type to search for in the dataset.  Must be either
+            ``'point'`` or ``'cell'``.
 
         progress_bar : bool, default: False
-            Display a progress bar to indicate progress.
+            If ``True``, display a progress bar.
+
+        inplace : bool, default: False
+            If ``True``, the mesh is updated in-place. Has no effect if
+            ``as_composite`` is ``True``.
 
         Returns
         -------
-        pyvista.MultiBlock
-            MultiBlock of ImageData with split labels.
+        pyvista.MultiBlock or pyvista.ImageData
+            ImageData with split label scalars if ``as_composite=False``,
+            and MultiBlock of ImageData when ``as_composite=True``.
 
         Examples
         --------
 
         """
 
-        # Check that we have integer scalars
-        def is_all_integers(x):
-            return np.all(np.mod(x, 1) == 0)
+        if scalars is None:
+            set_default_active_scalars(self)
+            _, scalars = self.active_scalars_info
+        arr = get_array(self, scalars, preference=preference, err=False)
+        if arr is None:
+            raise ValueError('No arrays present to split.')
 
-        set_default_active_scalars(self)
-        label_scalars = self.active_scalars
-        label_numbers = np.unique(label_scalars)
-        if not is_all_integers(label_numbers):
-            raise ValueError("Scalar values must be integer values.")
-        label_numbers = label_numbers.astype(int)
+        field = get_array_association(self, scalars, preference=preference)
 
-        # Process label names and filter as needed
-        filtered_labels = set()
-        if label_names is None:
-            # Use the number as the name
-            keys = label_numbers
-            vals = np.char.add('label-', label_numbers.astype(str))
-            label_names = dict(zip(keys, vals))
+        # Process label values
+        label_names = None
+        if label_values is None:
+            # Include all labels by default
+            label_values = np.unique(arr).tolist()
+
+            # Define ranges from single values
+            label_values = list(zip(label_values, label_values))
         else:
-            if not isinstance(label_names, dict):
-                raise TypeError("Label names must be dictionary-like.")
-            # Check that each label number has a key entry
-            keys = list(label_names.keys())
-            for num in label_numbers:
-                if num not in keys:
-                    if label_names_filter:
-                        filtered_labels.add(num)
+            # Process dict input
+            if isinstance(label_values, dict):
+                label_names = list(label_values.keys())
+                if not all(isinstance(name, str) for name in label_names):
+                    raise TypeError(
+                        f"Dictionary keys (i.e. label names) must all be strings. Got {label_names} instead."
+                    )
+                label_values = list(label_values.values())
+
+            # Ensure we have a sequence of values
+            if isinstance(label_values, collections.abc.Sequence):
+                _label_values = []
+                # Ensure entries have either one or two values
+                for val in label_values:
+                    val = np.asarray(val)
+                    if val.size == 1:
+                        val = val.tolist()
+                        _label_values.append([val, val])
+                    elif val.size == 2:
+                        _label_values.append(val.tolist())
                     else:
-                        label_names[num] = f'label-{num}'
-
-        # Remove any excluded labels
-        if excluded_labels is None:
-            excluded_labels = set()
-        else:
-            excluded_labels = np.asarray(excluded_labels)
-            if excluded_labels.ndim == 0:
-                # Ensure we can iterate over variable
-                excluded_labels = np.reshape(excluded_labels, (1,))
-            elif excluded_labels.ndim > 1:
-                raise ValueError("Excluded labels must be one-dimensional or a single value.")
-            if not is_all_integers(excluded_labels):
-                raise ValueError("Excluded labels must be integer values.")
-
-        label_numbers = np.array(list(
-            set(label_numbers) - set(excluded_labels) - set(filtered_labels)
-        ))
-        if len(label_numbers) == 0:
-            # nothing to process
-            return pyvista.MultiBlock()
-
-        # Separate the labels
-        block = pyvista.MultiBlock()
-        scalars_name = self.active_scalars_name
-        for num in label_numbers:
-            # handle background case
-            if num == 0 and boolean_output:
-                in_val = 1
+                        raise ValueError(
+                            f"Elements of label_values must be either a single scalar value "
+                            f"or a scalar range with two values. Got {label_values} instead."
+                        )
+                label_values = _label_values
             else:
-                in_val = num
+                label_values_np = np.asarray(label_values)
+                label_values_list = label_values_np.tolist()
+                if label_values_np.ndim == 0:
+                    label_values = [[label_values_list, label_values_list]]
+                elif label_values_np.ndim == 1:
+                    # Create ranges from single values
+                    label_values = list(zip(label_values_list, label_values_list))
+                elif label_values_np.ndim == 2 and label_values_np.shape[1] == 2:
+                    label_values = label_values_list
+                else:
+                    raise ValueError(
+                        f"Elements of label_values must be a single scalar value "
+                        f"or a scalar range. Got {label_values} instead."
+                    )
 
-            b = self.image_threshold(
-                [num, num], in_value=in_val, out_value=0, progress_bar=progress_bar
+        # 'label_values' should be an Nx2 list at this point
+        # Make sure everything is numeric
+        for row in label_values:
+            for entry in row:
+                if entry is None:
+                    raise TypeError("Label values cannot be None.")
+                if not isinstance(entry, numbers.Real):
+                    raise ValueError(f"Label values must be real numbers. Got {entry} instead.")
+
+        # Create label names
+        if label_names is None:
+            label_names = list()
+            for lower, upper in label_values:
+                if lower == upper:
+                    label_names.append(f'label-{lower}')
+                else:
+                    label_names.append(f'label-{lower}_{upper}')
+
+        # Initialize output
+        if as_composite:
+            output = pyvista.MultiBlock()
+        elif inplace:
+            output = self
+        else:
+            output = self.copy()
+
+        # Split the labels
+        for i, (lower, upper) in enumerate(label_values):
+            # Prepare threshold parameters
+            if as_binary_mask:
+                in_val = 1
+                out_val = 0
+            elif lower == background_value and upper == background_value:
+                continue  # Skip background case as output will be all zeros
+            else:
+                in_val = None  # Keep input values as-is
+                out_val = background_value
+
+            thresh = self.image_threshold(
+                [lower, upper],
+                in_value=in_val,
+                out_value=out_val,
+                progress_bar=progress_bar,
             )
 
-            if boolean_output:
-                b[scalars_name] = b[scalars_name].astype(bool)
-            block.append(b, name=label_names[num])
+            # Get data array
+            if field == FieldAssociation.POINT:
+                thresh = thresh.point_data[scalars]
+            elif preference == FieldAssociation.CELL:
+                thresh = thresh.cell_data[scalars]
 
-        return block
+            # Store result
+            if as_composite:
+                # Add tresholded image to multiblock
+                image = self.copy()
+                image[scalars] = thresh
+                output.append(image, name=label_names[i])
+            else:
+                if field == FieldAssociation.POINT:
+                    output.point_data[label_names[i]] = thresh
+                elif preference == FieldAssociation.CELL:
+                    output.cell_data[label_names[i]] = thresh
+
+        return output
 
     def fft(self, output_scalars_name=None, progress_bar=False):
         """Apply a fast Fourier transform (FFT) to the active scalars.
