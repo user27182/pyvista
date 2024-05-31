@@ -83,9 +83,7 @@ pl.show()
 # +++++++++++++++++++++++++
 #
 # Create labeled surfaces from 3D label maps (e.f. multi-label image segmentation)
-# using :func:`contour_labeled() <pyvista.ImageDataFilters.contour_labeled>`.
-# Requires VTK version 9.3
-if pv.vtk_version_info >= (9, 3):
-    label_map = pv.examples.download_frog_tissue()
-    mesh = label_map.contour_labeled()
-    mesh.plot(cmap="glasbey_warm", cpos="yx", show_scalar_bar=False)
+# using :func:`~pyvista.ImageDataFilters.contour_labeled`.
+label_map = pv.examples.download_whole_body_ct_male()['label_map']
+mesh = label_map.contour_labeled()
+mesh.plot(cmap="glasbey", cpos="yx", show_scalar_bar=False)
