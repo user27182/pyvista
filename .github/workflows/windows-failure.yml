@@ -6,29 +6,30 @@ on:
 
 jobs:
   debug:
+    name: Windows Debug
     runs-on: windows-latest
+    timeout-minutes: 30
+
+    env:
+      CI_WINDOWS: true
 
     steps:
       - name: Checkout PyVista
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
-          repository: pyvista/pyvista
-          ref: main
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.14"
+          cache: "pip"
 
-      - name: Install PyVista
-        run: |
-          python -m pip install --upgrade pip
-          pip install pyvista -e . --group dev
+      - name: Set up headless display
+        uses: pyvista/setup-headless-display-action@5bc8de3bc71fcda7a96439571287a554901541a0
 
-      - name: Install nightly VTK
-        run: |
-          pip install --extra-index-url https://wheels.vtk.org vtk --pre --no-cache
+      - name: Install tox-uv
+        run: pip install tox-uv
 
-      - name: Run failing test
-        run: |
-          pytest -k test_init_cell_array_from_regular_cells -vv -s
+      - name: Core Testing
+        run: tox run -e py3.14-core -- -k test_init_cell_array_from_regular_cells -vv -s
