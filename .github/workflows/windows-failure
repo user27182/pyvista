@@ -1,0 +1,33 @@
+name: Debug Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout PyVista
+        uses: actions/checkout@v4
+        with:
+          repository: pyvista/pyvista
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install PyVista
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyvista -e . --group dev
+
+      - name: Install nightly VTK
+        run: |
+          pip install --extra-index-url https://wheels.vtk.org vtk --pre --no-cache
+
+      - name: Run failing test
+        run: |
+          pytest -k test_init_cell_array_from_regular_cells -vv -s
