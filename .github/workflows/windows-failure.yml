@@ -32,4 +32,7 @@ jobs:
         run: pip install tox-uv
 
       - name: Core Testing
+        env:
+          TOX_OVERRIDE: |
+            testenv.py3.14-core.commands_pre[0]=python -m pip install --extra-index-url https://wheels.vtk.org vtk --pre --no-cache
         run: tox run -e py3.14-core -- -k test_init_cell_array_from_regular_cells -vv -s
