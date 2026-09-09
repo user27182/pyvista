@@ -14,20 +14,23 @@ defaults:
 
 jobs:
   stress:
-    name: stress py${{ matrix.python-version }} r${{ matrix.rep }}
+    name: stress ${{ matrix.variant }} r${{ matrix.rep }}
     runs-on: windows-latest
-    timeout-minutes: 70
+    timeout-minutes: 65
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.13", "3.14"]
-        rep: [1, 2, 3, 4]
+        variant: [baseline, lp0, nocache]
+        rep: [1, 2, 3]
     env:
       CI_WINDOWS: true
       PYVISTA_PLOT_THEME: testing
-      STRESS_ITERS: "400"
-      STRESS_BUDGET_MIN: "45"
+      STRESS_ITERS: "1000"
+      STRESS_BUDGET_MIN: "40"
       STRESS_WORKERS: "3"
+      LP_NUM_THREADS: ${{ matrix.variant == 'lp0' && '0' || '' }}
+      MESA_SHADER_CACHE_DISABLE: ${{ matrix.variant == 'nocache' && 'true' || '' }}
+      _NT_SYMBOL_PATH: srv*C:\symbols*https://msdl.microsoft.com/download/symbols
     steps:
       - uses: actions/checkout@v7
         with:
@@ -36,7 +39,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"
 
       - name: Set up headless display
         uses: pyvista/setup-headless-display-action@b0bf9f57d62d2b3fee9f1c0e0c7e390f05e97a4e
@@ -45,6 +48,13 @@ jobs:
         run: |
           pip install uv
           uv pip install --system . --group pinned py-spy psutil
+
+      - name: Install cdb
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          choco install windbg -y --no-progress || true
+          ls "/c/Program Files (x86)/Windows Kits/10/Debuggers/x64/" | head || true
 
       - name: Report
         run: python -m pyvista report
@@ -56,6 +66,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: stress-py${{ matrix.python-version }}-r${{ matrix.rep }}
+          name: stress-${{ matrix.variant }}-r${{ matrix.rep }}
           path: stress_results/
           if-no-files-found: ignore
