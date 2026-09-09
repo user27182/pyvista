@@ -16,16 +16,17 @@ jobs:
   stress:
     name: stress py${{ matrix.python-version }} r${{ matrix.rep }}
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 70
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.13", "3.14"]
-        rep: [1, 2, 3]
+        rep: [1, 2, 3, 4]
     env:
       CI_WINDOWS: true
       PYVISTA_PLOT_THEME: testing
-      STRESS_ITERS: "500"
+      STRESS_ITERS: "400"
+      STRESS_BUDGET_MIN: "45"
       STRESS_WORKERS: "3"
     steps:
       - uses: actions/checkout@v7
@@ -43,7 +44,7 @@ jobs:
       - name: Install
         run: |
           pip install uv
-          uv pip install --system . --group pinned py-spy
+          uv pip install --system . --group pinned py-spy psutil
 
       - name: Report
         run: python -m pyvista report
