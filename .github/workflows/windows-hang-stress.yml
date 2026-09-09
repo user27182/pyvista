@@ -1,0 +1,60 @@
+name: Windows child hang stress
+
+on:
+  push:
+    branches: ["debug/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  stress:
+    name: stress py${{ matrix.python-version }} r${{ matrix.rep }}
+    runs-on: windows-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13", "3.14"]
+        rep: [1, 2, 3]
+    env:
+      CI_WINDOWS: true
+      PYVISTA_PLOT_THEME: testing
+      STRESS_ITERS: "500"
+      STRESS_WORKERS: "3"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up headless display
+        uses: pyvista/setup-headless-display-action@b0bf9f57d62d2b3fee9f1c0e0c7e390f05e97a4e
+
+      - name: Install
+        run: |
+          pip install uv
+          uv pip install --system . --group pinned py-spy
+
+      - name: Report
+        run: python -m pyvista report
+
+      - name: Stress
+        run: python stress_child_hang.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stress-py${{ matrix.python-version }}-r${{ matrix.rep }}
+          path: stress_results/
+          if-no-files-found: ignore
