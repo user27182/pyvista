@@ -64,6 +64,7 @@ jobs:
         attempt: [1, 2, 3]
     env:
       XVFB_VARIANT: ${{ matrix.xvfb }}
+      XVFB_AUDIT: "1"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -98,6 +99,11 @@ jobs:
         env:
           XVFB_ERROR_FILE: ${{ runner.temp }}/xvfb-vtk-self.err
         run: bash .github/stress/run_under_xvfb.sh python .github/stress/xvfb_reset_probe.py vtk-self --repeats 5 --iters 100
+
+      - name: VTK concurrent-loop probe
+        env:
+          XVFB_ERROR_FILE: ${{ runner.temp }}/xvfb-vtk-loop.err
+        run: bash .github/stress/run_under_xvfb.sh python .github/stress/xvfb_reset_probe.py vtk-loop --procs 4 --iters 50 --repeats 10
 
       - name: Show Xvfb logs
         if: always()
@@ -152,6 +158,11 @@ jobs:
             23,
             24,
             25,
+            26,
+            27,
+            28,
+            29,
+            30,
           ]
     env:
       TOX_COLORED: "yes"

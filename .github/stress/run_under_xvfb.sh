@@ -9,7 +9,9 @@ args="$(sed -n 's/^XVFBARGS="\(.*\)"$/\1/p' "$script")"
 	echo "could not read XVFBARGS from $script" >&2
 	exit 1
 }
-args="$args -audit 2"
+if [ "${XVFB_AUDIT:-0}" = 1 ]; then
+	args="$args -audit 2"
+fi
 
 case "${XVFB_VARIANT:-default}" in
 default) ;;

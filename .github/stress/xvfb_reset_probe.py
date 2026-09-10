@@ -1,6 +1,6 @@
 """Reproduce the Xvfb reset race outside of pytest; see the mode help strings."""
 
-# ruff: noqa: ANN001, ANN201, ANN202, E501, INP001, PLC0415, PLR0917, T201, TID251
+# ruff: noqa: ANN001, ANN201, ANN202, E501, INP001, PLC0415, PLR0917, S311, T201, TID251
 from __future__ import annotations
 
 import argparse
@@ -18,6 +18,7 @@ MODE_HELP = {
     'x11': 'each of --procs processes opens and closes the display --iters times as fast as it can',
     'vtk': 'each of --rounds rounds starts --procs fresh interpreters that build one render window after a random delay',
     'vtk-self': 'one interpreter creates and destroys --iters render windows back to back, --repeats times over',
+    'vtk-loop': 'each of --procs concurrent interpreters creates and destroys --iters render windows back to back, --repeats times over',
 }
 
 
@@ -178,6 +179,34 @@ def run_vtk_self(args):
     return failures
 
 
+def run_vtk_loop(args):
+    """Race several processes' back-to-back windows against each other."""
+    ctx = mp.get_context('spawn')
+    failures = 0
+    for repeat in range(args.repeats):
+        queue = ctx.Queue()
+        procs = [
+            ctx.Process(target=_vtk_self_worker, args=(i, args.iters, queue))
+            for i in range(args.procs)
+        ]
+        for proc in procs:
+            proc.start()
+        results = [queue.get() for _ in procs]
+        for proc in procs:
+            proc.join()
+        bad = [r for r in results if r[1] is not None]
+        failures += len(bad)
+        print(f'repeat {repeat}: {len(bad)}/{args.procs} processes hit an anomaly')
+        for idx, iteration, cls, initialized, never_rendered, output in sorted(bad):
+            print(
+                f'  proc {idx}: anomaly at window {iteration}: class={cls} '
+                f'initialized={initialized} never_rendered={never_rendered}'
+            )
+            for line in output.splitlines():
+                print(f'    {line}')
+    return failures
+
+
 def main(argv=None):
     """Run one probe mode and print a ``FAILURES`` line."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -193,13 +222,22 @@ def main(argv=None):
     vtk_self = sub.add_parser('vtk-self', help=MODE_HELP['vtk-self'])
     vtk_self.add_argument('--repeats', type=int, default=5)
     vtk_self.add_argument('--iters', type=int, default=100)
+    vtk_loop = sub.add_parser('vtk-loop', help=MODE_HELP['vtk-loop'])
+    vtk_loop.add_argument('--procs', type=int, default=4)
+    vtk_loop.add_argument('--iters', type=int, default=50)
+    vtk_loop.add_argument('--repeats', type=int, default=10)
     args = parser.parse_args(argv)
 
     print(
         f'DISPLAY={os.environ.get("DISPLAY")} XAUTHORITY={os.environ.get("XAUTHORITY")} '
         f'python={sys.version.split()[0]}'
     )
-    runner = {'x11': run_x11, 'vtk': run_vtk, 'vtk-self': run_vtk_self}[args.mode]
+    runner = {
+        'x11': run_x11,
+        'vtk': run_vtk,
+        'vtk-self': run_vtk_self,
+        'vtk-loop': run_vtk_loop,
+    }[args.mode]
     failures = runner(args)
     variant = os.environ.get('XVFB_VARIANT', 'default')
     print(f'FAILURES: {failures} (mode={args.mode}, variant={variant})')
