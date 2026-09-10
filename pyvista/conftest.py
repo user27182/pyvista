@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 import resource
 import subprocess
-import sys
 import time
 
 import matplotlib as mpl
@@ -15,9 +14,6 @@ import pytest
 
 # Stress-test diagnostics: set by .github/workflows/stress-xvfb.yml, written per xdist worker.
 _DIAG_DIR = os.environ.get('PYVISTA_STRESS_DIAG_DIR')
-if _DIAG_DIR:
-    os.environ.setdefault('EGL_LOG_LEVEL', 'debug')
-    os.environ.setdefault('LIBGL_DEBUG', 'verbose')
 
 import pyvista as pv  # noqa: E402
 from pyvista import _vtk  # noqa: E402
@@ -121,11 +117,6 @@ def _snapshot() -> str:
 
 
 if _DIAG_DIR:
-    _diag(
-        f'conftest imported argv={sys.argv[1:4]} python={sys.version.split()[0]} '
-        f'libEGL_in_ldcache={_run("ldconfig -p | grep -c libEGL.so.1")} {_process_facts()}'
-    )
-
     _plotter_init = pv.Plotter.__init__
 
     def _tracking_init(self, *args, **kwargs):
@@ -155,14 +146,14 @@ def _is_window_anomaly(record: str) -> bool:
     return 'vtkXOpenGLRenderWindow' not in record or record.endswith(':init0:never0')
 
 
-def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
+def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001  # numpydoc ignore=PR01
     """Log the end-of-session state of this worker."""
     if _DIAG_DIR:
         _diag(f'session finish exitstatus={int(exitstatus)} {_snapshot()}')
 
 
 @pytest.fixture(autouse=True)
-def fail_on_vtk_output(request):
+def fail_on_vtk_output(request):  # numpydoc ignore=PR01
     """Fail the test when VTK logs an error or warning while it runs.
 
     Defined here rather than in ``tests`` so that it also applies to the doctests run
@@ -186,7 +177,7 @@ def matplotlib_headless():
 
 
 @pytest.fixture(autouse=True)
-def autoclose_plotters(request):
+def autoclose_plotters(request):  # numpydoc ignore=PR01
     """Close all plotters."""
     yield
     pv.close_all()
