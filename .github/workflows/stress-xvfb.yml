@@ -1,0 +1,217 @@
+# Throwaway stress test (fork only): reproduce the docstringcheck
+# "bad X server connection" flake and A/B it against Xvfb -noreset.
+name: Stress Xvfb reset race
+
+on: [pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.14"
+  APT_PACKAGES: xvfb libgl1 libglx-mesa0 libosmesa6 x11-utils
+
+jobs:
+  cache-pyvista-data:
+    name: Cache pyvista/data
+    runs-on: ubuntu-22.04
+    outputs:
+      key: ${{ steps.restore.outputs.cache-primary-key }}
+    steps:
+      - name: Get pyvista/data commit
+        run: |
+          commit="$(git ls-remote https://github.com/pyvista/data HEAD | awk '{ print $1 }')"
+          [ -n "$commit" ] || { echo "::error::could not resolve pyvista/data HEAD"; exit 1; }
+          echo "VTK_DATA_COMMIT=$commit" >> "$GITHUB_ENV" # zizmor: ignore[github-env]
+
+      - name: Restore pyvista/data cache
+        id: restore
+        uses: actions/cache/restore@v6
+        with:
+          path: pyvista-data
+          key: pyvista-data-1-${{ env.VTK_DATA_COMMIT }}
+          lookup-only: true
+
+      - name: Clone pyvista/data if cache miss
+        if: steps.restore.outputs.cache-hit != 'true'
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          repository: pyvista/data
+          path: pyvista-data
+
+      - name: Remove git metadata
+        if: steps.restore.outputs.cache-hit != 'true'
+        run: rm -rf pyvista-data/.git
+
+      - name: Save pyvista/data cache
+        if: steps.restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: pyvista-data
+          key: pyvista-data-1-${{ env.VTK_DATA_COMMIT }}
+
+  # Isolated reproducers: no pytest, no pyvista, just X clients racing the
+  # server reset that Xvfb performs when its last client disconnects.
+  probe:
+    name: Reset-race probe (${{ matrix.xvfb }}, ${{ matrix.attempt }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        xvfb: [default, noreset]
+        attempt: [1, 2, 3]
+    env:
+      XVFB_VARIANT: ${{ matrix.xvfb }}
+      XVFB_AUDIT: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9
+        with:
+          packages: ${{ env.APT_PACKAGES }}
+          version: 3.0
+
+      - name: Install VTK
+        run: pip install vtk==9.7.0
+
+      - name: Report environment
+        run: bash .github/stress/report_env.sh
+
+      - name: X11 open/close probe
+        env:
+          XVFB_ERROR_FILE: ${{ runner.temp }}/xvfb-x11.err
+        run: bash .github/stress/run_under_xvfb.sh python .github/stress/xvfb_reset_probe.py x11 --procs 4 --iters 300
+
+      - name: VTK first-window probe
+        env:
+          XVFB_ERROR_FILE: ${{ runner.temp }}/xvfb-vtk.err
+        run: bash .github/stress/run_under_xvfb.sh python .github/stress/xvfb_reset_probe.py vtk --procs 4 --rounds 40
+
+      - name: VTK self-race probe
+        env:
+          XVFB_ERROR_FILE: ${{ runner.temp }}/xvfb-vtk-self.err
+        run: bash .github/stress/run_under_xvfb.sh python .github/stress/xvfb_reset_probe.py vtk-self --repeats 5 --iters 100
+
+      - name: VTK concurrent-loop probe
+        env:
+          XVFB_ERROR_FILE: ${{ runner.temp }}/xvfb-vtk-loop.err
+        run: bash .github/stress/run_under_xvfb.sh python .github/stress/xvfb_reset_probe.py vtk-loop --procs 4 --iters 50 --repeats 10
+
+      - name: Show Xvfb logs
+        if: always()
+        run: |
+          for f in "$RUNNER_TEMP"/xvfb-*.err; do
+            echo "::group::$(basename "$f") ($(wc -l < "$f") lines)"
+            grep -v -E ' connected| disconnected' "$f" | head -n 60
+            echo "::endgroup::"
+          done
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: probe-${{ matrix.xvfb }}-${{ matrix.attempt }}
+          path: ${{ runner.temp }}/xvfb-*.err
+
+  # The real thing: the upstream docstringcheck job, many times over, with
+  # per-worker diagnostics written by pyvista/conftest.py.
+  doctest:
+    name: doctest-modules (${{ matrix.xvfb }}, run ${{ matrix.run }})
+    needs: cache-pyvista-data
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        xvfb: [default, noreset]
+        run:
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+          ]
+    env:
+      TOX_COLORED: "yes"
+      XVFB_VARIANT: ${{ matrix.xvfb }}
+      PYVISTA_STRESS_DIAG_DIR: ${{ github.workspace }}/stress-diag
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9
+        with:
+          packages: ${{ env.APT_PACKAGES }}
+          version: 3.0
+
+      - name: Restore pyvista/data cache
+        uses: actions/cache/restore@v6
+        with:
+          path: pyvista-data
+          key: ${{ needs.cache-pyvista-data.outputs.key }}
+          fail-on-cache-miss: true
+
+      - name: Point PYVISTA_DATA at the restored folder
+        run: echo "PYVISTA_DATA=$GITHUB_WORKSPACE/pyvista-data" >> "$GITHUB_ENV" # zizmor: ignore[github-env]
+
+      - name: Install tox-uv
+        run: pip install tox-uv
+
+      - name: Report environment
+        run: bash .github/stress/report_env.sh
+
+      - name: Test Package Docstrings (Linux)
+        env:
+          XVFB_ERROR_FILE: ${{ github.workspace }}/stress-diag/xvfb.err
+        run: |
+          mkdir -p "$PYVISTA_STRESS_DIAG_DIR"
+          bash .github/stress/run_under_xvfb.sh tox run -e doctest-modules
+
+      - name: Diagnostics summary
+        if: always()
+        run: bash .github/stress/summarize_diag.sh "$PYVISTA_STRESS_DIAG_DIR"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: diag-${{ matrix.xvfb }}-${{ matrix.run }}
+          path: stress-diag/
