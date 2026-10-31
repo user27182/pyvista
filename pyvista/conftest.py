@@ -87,6 +87,34 @@ def matplotlib_headless() -> None:
 
 
 @pytest.fixture(autouse=True)
+def skip_show(request: pytest.FixtureRequest) -> Generator[None, None, None]:
+    """Close plotters instead of rendering them when ``PYVISTA_DOCTEST_SKIP_SHOW`` is set.
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        Fixture request for the doctest.
+
+    """
+    # Chart axes only update their ranges when rendered
+    if not os.environ.get('PYVISTA_DOCTEST_SKIP_SHOW') or 'charts.py' in request.node.nodeid:
+        yield
+        return
+    show = pv.Plotter.show
+    needs_render = ('screenshot', 'return_img', 'return_cpos', 'store_image_depth')
+
+    def close_instead(self: pv.Plotter, *args: object, **kwargs: object) -> object:
+        if args or any(kwargs.get(key) for key in needs_render):
+            return show(self, *args, **kwargs)  # type: ignore[arg-type]
+        self.close()
+        return None
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(pv.Plotter, 'show', close_instead)
+        yield
+
+
+@pytest.fixture(autouse=True)
 def autoclose_plotters() -> Generator[None, None, None]:
     """Close all plotters."""
     yield
