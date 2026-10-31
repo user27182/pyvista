@@ -28,6 +28,8 @@ jobs:
             python-version: "3.14" # Should be the latest version supported
           - os: windows-latest
             python-version: "3.11" # Should be the oldest version supported
+          - os: macos-latest
+            python-version: "3.14"
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
