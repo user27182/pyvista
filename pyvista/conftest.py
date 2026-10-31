@@ -88,7 +88,7 @@ def matplotlib_headless() -> None:
 
 @pytest.fixture(autouse=True)
 def skip_show(request: pytest.FixtureRequest) -> Generator[None, None, None]:
-    """Close plotters instead of rendering them when ``PYVISTA_DOCTEST_SKIP_SHOW`` is set.
+    """Close plotters instead of rendering them when ``_PYVISTA_DOCTEST_SKIP_SHOW`` is ``true``.
 
     Parameters
     ----------
@@ -97,7 +97,8 @@ def skip_show(request: pytest.FixtureRequest) -> Generator[None, None, None]:
 
     """
     # Chart axes only update their ranges when rendered
-    if not os.environ.get('PYVISTA_DOCTEST_SKIP_SHOW') or 'charts.py' in request.node.nodeid:
+    skip = os.environ.get('_PYVISTA_DOCTEST_SKIP_SHOW', 'false').lower() == 'true'
+    if not skip or 'charts.py' in request.node.nodeid:
         yield
         return
     show = pv.Plotter.show
