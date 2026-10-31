@@ -90,6 +90,8 @@ def matplotlib_headless() -> None:
 def skip_show(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     """Close plotters instead of rendering them when ``_PYVISTA_DOCTEST_SKIP_SHOW`` is ``true``.
 
+    The macOS CI job sets it, since its software renderer is slow.
+
     Parameters
     ----------
     request : pytest.FixtureRequest
