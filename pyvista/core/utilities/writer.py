@@ -2,6 +2,21 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'abc',
+    'contextlib',
+    'numpy',
+    'pathlib',
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.filters.composite',
+    'pyvista.core.utilities',
+    'pyvista.core.utilities.fileio',
+    'pyvista.core.utilities.misc',
+    'pyvista_validation',
+    'typing',
+]
+
 from abc import abstractmethod
 import contextlib
 from pathlib import Path

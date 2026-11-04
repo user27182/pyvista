@@ -10,6 +10,14 @@ decouple the ``core`` and ``plotting`` APIs.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'numpy',
+    'pathlib',
+    'pyvista',
+    'pyvista_validation.check',
+    'typing',
+]
+
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any

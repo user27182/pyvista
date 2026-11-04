@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'numpy',
+    'pyvista',
+    'pyvista_validation',
+    'typing',
+]
+
 from collections.abc import Iterable
 from collections.abc import MutableSequence
 from typing import TYPE_CHECKING

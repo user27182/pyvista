@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'importlib.metadata',
+    'pyvista._warn_external',
+    'pyvista.core.utilities._registry_helpers',
+    'typing',
+]
+
 from collections.abc import Mapping
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING

@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'os',
+    'pyvista._vtk',
+    'pyvista.core.formatting_html',
+    're',
+    'scooby',
+    'subprocess',
+    'sys',
+    'types',
+]
+
 import os
 import re
 import subprocess

@@ -2,6 +2,20 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'numpy',
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.formatting_html',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.helpers',
+    'pyvista_validation',
+    'typing',
+    'weakref',
+    'xml.etree',
+]
+
 from typing import TYPE_CHECKING
 import weakref
 from xml.etree import ElementTree as ET

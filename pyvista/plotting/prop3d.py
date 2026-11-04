@@ -2,6 +2,20 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'abc',
+    'functools',
+    'numpy',
+    'pyvista',
+    'pyvista.core._typing_core',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.misc',
+    'pyvista.core.utilities.transform',
+    'pyvista_validation',
+    'typing',
+]
+
 from abc import ABC
 from abc import abstractmethod
 import functools

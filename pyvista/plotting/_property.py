@@ -2,6 +2,20 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'functools',
+    'numpy',
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.errors',
+    'pyvista.core.formatting_html',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.colors',
+    'pyvista.plotting.opts',
+    'pyvista_validation',
+    'typing',
+]
+
 import functools
 from typing import TYPE_CHECKING
 

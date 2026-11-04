@@ -2,6 +2,16 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'functools',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core.config',
+    'pyvista.core.errors',
+    'sys',
+    'typing',
+]
+
 import functools
 import sys
 from typing import TYPE_CHECKING

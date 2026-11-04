@@ -2,6 +2,20 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'contextlib',
+    'math',
+    'pyvista',
+    'pyvista.core.errors',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.colors',
+    'pyvista.plotting.tools',
+    'pyvista_validation',
+    'typing',
+    'weakref',
+]
+
 import contextlib
 import math
 from typing import TYPE_CHECKING

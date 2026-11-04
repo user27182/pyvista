@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'importlib.metadata',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core.utilities._optional_formats',
+    'pyvista.core.utilities._registry_helpers',
+    'typing',
+]
+
 from importlib.metadata import EntryPoint
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING

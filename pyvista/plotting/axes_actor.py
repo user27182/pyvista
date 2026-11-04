@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'enum',
+    'pyvista',
+    'pyvista.core._typing_core',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting._property',
+    'pyvista_validation',
+    'typing',
+]
+
 from enum import Enum
 from typing import TYPE_CHECKING
 from typing import cast

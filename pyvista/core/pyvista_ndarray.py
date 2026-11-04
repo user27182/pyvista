@@ -2,6 +2,16 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'numpy',
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.misc',
+    'typing',
+]
+
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 from typing import cast

@@ -2,6 +2,20 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'docutils',
+    'docutils.parsers.rst',
+    'json',
+    'pathlib',
+    'pyvista.examples.downloads',
+    'pyvista.ext._plot_subprocess',
+    'sphinx.util',
+    'sphinx.util.nodes',
+    'subprocess',
+    'sys',
+    'typing',
+]
+
 import json
 from pathlib import Path
 import subprocess

@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'numpy',
+    'pathlib',
+    'pyvista',
+    'pyvista.core.utilities.arrays',
+    'typing',
+]
+
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Literal

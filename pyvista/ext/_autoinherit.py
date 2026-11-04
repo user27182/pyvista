@@ -16,6 +16,21 @@ when every provider is undocumented. Members implemented by VTK are never docume
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'docutils.frontend',
+    'docutils.parsers.rst',
+    'functools',
+    'importlib',
+    'inspect',
+    'pathlib',
+    'pyvista.core._vtk_utilities',
+    're',
+    'sphinx.ext.autosummary',
+    'sphinx.util',
+    'sphinx.util.docstrings',
+    'typing',
+]
+
 import functools
 import importlib
 import inspect

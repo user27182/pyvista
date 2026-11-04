@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'cyclopts',
+    'pyvista',
+    'rich.console',
+]
+
 from cyclopts import App
 from rich.console import Console
 

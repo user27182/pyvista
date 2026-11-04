@@ -2,6 +2,21 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'math',
+    'numpy',
+    'pyvista',
+    'pyvista._plot',
+    'pyvista._warn_external',
+    'pyvista.core.utilities.helpers',
+    'pyvista.plotting.colors',
+    'pyvista.plotting.text',
+    'string',
+    'typing',
+    'weakref',
+]
+
 from collections.abc import Iterable
 from collections.abc import KeysView
 from collections.abc import Mapping

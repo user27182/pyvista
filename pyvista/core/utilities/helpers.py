@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections',
+    'collections.abc',
+    'numpy',
+    'pyvista',
+    'pyvista.core.utilities.fileio',
+    'pyvista_validation',
+    'typing',
+    'typing_extensions',
+]
+
 from collections import deque
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
@@ -17,7 +28,7 @@ from typing_extensions import TypeIs
 import pyvista as pv
 from pyvista import _vtk
 
-from . import transformations
+from . import transformations  # eager: loading it exposes pyvista.transformations
 from .fileio import from_meshio
 from .fileio import from_trimesh
 from .fileio import is_meshio_mesh

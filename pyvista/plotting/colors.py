@@ -7,6 +7,24 @@ Used code from matplotlib.colors. Thanks for your work.
 # of methods defined in this module.
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'colorsys',
+    'contextlib',
+    'cycler',
+    'functools',
+    'importlib',
+    'inspect',
+    'matplotlib.colors',
+    'matplotlib.pyplot',
+    'numpy',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'pyvista.core.utilities.misc',
+    'pyvista_validation',
+    'typing',
+]
+
 import colorsys
 import contextlib
 import functools

@@ -1,5 +1,16 @@
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'functools',
+    'inspect',
+    'pathlib',
+    'pyvista._version',
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'typing',
+    'typing_extensions',
+]
+
 import functools
 import inspect
 from pathlib import Path

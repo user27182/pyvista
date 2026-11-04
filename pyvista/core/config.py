@@ -52,6 +52,14 @@ Dump the current config to a plain dict (useful for logging or round-tripping):
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'itertools',
+    'numpy',
+    'pyvista._warn_external',
+    'pyvista.core.formatting_html',
+    'typing',
+]
+
 import itertools
 from typing import TYPE_CHECKING
 from typing import Any

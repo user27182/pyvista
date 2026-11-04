@@ -2,6 +2,21 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'itertools',
+    'numpy',
+    'pyvista',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.background_renderer',
+    'pyvista.plotting.colors',
+    'pyvista.plotting.renderer',
+    'pyvista_validation',
+    're',
+    'typing',
+    'weakref',
+]
+
 from collections.abc import Sequence
 import itertools
 import re

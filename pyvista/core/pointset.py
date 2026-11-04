@@ -2,6 +2,36 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'contextlib',
+    'functools',
+    'numpy',
+    'pathlib',
+    'pyvista',
+    'pyvista._version',
+    'pyvista._warn_external',
+    'pyvista.core._structured_data',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.cell',
+    'pyvista.core.celltype',
+    'pyvista.core.dataset',
+    'pyvista.core.errors',
+    'pyvista.core.filters',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.cells',
+    'pyvista.core.utilities.fileio',
+    'pyvista.core.utilities.misc',
+    'pyvista.core.utilities.points',
+    'pyvista.core.utilities.writer',
+    'pyvista.core.utilities.writer_registry',
+    'pyvista_validation',
+    'pyvista_validation.check',
+    're',
+    'textwrap',
+    'typing',
+]
+
 from collections.abc import Iterable
 from collections.abc import Sequence
 import contextlib

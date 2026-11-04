@@ -2,6 +2,25 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'contextlib',
+    'numpy',
+    'operator',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'pyvista.core.filters',
+    'pyvista.core.filters.data_object',
+    'pyvista.core.filters.data_set',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.misc',
+    'pyvista_validation',
+    'typing',
+    'warnings',
+]
+
 from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Sequence

@@ -8,6 +8,15 @@ them via the ``pyvista.jupyter_backends`` entry-point group.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'functools',
+    'importlib.util',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.jupyter',
+    'typing',
+]
+
 import functools
 import importlib.util
 from typing import TYPE_CHECKING

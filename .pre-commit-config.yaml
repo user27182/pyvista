@@ -123,6 +123,13 @@ repos:
         entry: python -m hooks.private_class_docstrings
         files: ^pyvista/
         types: [python]
+      - id: lazy-modules
+        name: "Keep __lazy_modules__ in step with module imports"
+        language: python
+        entry: python -m hooks.lazy_modules
+        files: ^pyvista/
+        exclude: __init__\.py$
+        types: [python]
       - id: no-lint-suppression-comments
         name: "No lint suppression comments (fix it, or use pyproject.toml per-file-ignores)"
         language: pygrep

@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'importlib',
+    'importlib.metadata',
+    'pyvista._warn_external',
+    'pyvista.core.utilities._registry_helpers',
+    'typing',
+]
+
 from collections.abc import Mapping
 import importlib
 from importlib.metadata import EntryPoint

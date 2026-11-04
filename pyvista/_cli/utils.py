@@ -6,6 +6,26 @@ Mostly contains converters, validators, console error helper and help formatters
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'ast',
+    'cyclopts',
+    'cyclopts.help',
+    'enum',
+    'glob',
+    'pathlib',
+    'pyvista',
+    'pyvista._cli.app',
+    'pyvista.plotting._typing',
+    'pyvista_validation',
+    'rich',
+    'rich.console',
+    'rich.markup',
+    'rich.panel',
+    'rich.text',
+    'typing',
+    'warnings',
+]
+
 import ast
 from enum import StrEnum
 import glob

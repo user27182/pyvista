@@ -13,6 +13,21 @@ forward to the component for backward compatibility.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'functools',
+    'numpy',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.composite_mapper',
+    'pyvista.plotting.errors',
+    'pyvista.plotting.mapper',
+    'pyvista.plotting.opts',
+    'typing',
+    'weakref',
+]
+
 import functools
 from typing import TYPE_CHECKING
 from typing import cast

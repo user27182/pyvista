@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'math',
+    'numpy',
+    'pyvista',
+    'pyvista.core.filters',
+    'pyvista.core.utilities.geometric_sources',
+    'pyvista.core.utilities.helpers',
+    'pyvista_validation',
+    'typing',
+]
+
 from collections.abc import Sequence
 import math
 from typing import TYPE_CHECKING

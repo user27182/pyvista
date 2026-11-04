@@ -2,6 +2,25 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'itertools',
+    'numpy',
+    'pathlib',
+    'pyvista',
+    'pyvista.core.filters',
+    'pyvista.core.filters.data_set',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.affine_widget',
+    'pyvista.plotting.colors',
+    'pyvista.plotting.opts',
+    'pyvista.plotting.utilities.algorithms',
+    'pyvista_validation',
+    'typing',
+    'weakref',
+]
+
 import itertools
 from pathlib import Path
 from typing import TYPE_CHECKING

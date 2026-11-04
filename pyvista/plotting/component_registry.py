@@ -34,6 +34,15 @@ pyvista.registered_plotter_components
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'contextlib',
+    'importlib',
+    'importlib.metadata',
+    'pyvista._warn_external',
+    'pyvista.core.utilities._registry_helpers',
+    'typing',
+]
+
 import contextlib
 
 # ICN003 waived: tests patch this module-level name to intercept plugin

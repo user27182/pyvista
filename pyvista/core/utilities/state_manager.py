@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'abc',
+    'contextlib',
+    'pyvista',
+    'pyvista.core',
+    'pyvista_validation',
+    'typing',
+]
+
 from abc import ABC
 from abc import abstractmethod
 

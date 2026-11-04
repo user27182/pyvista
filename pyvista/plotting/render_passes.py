@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'itertools',
+    'pyvista',
+    'pyvista.core.utilities.misc',
+    'typing',
+    'weakref',
+]
+
 import itertools
 from typing import TYPE_CHECKING
 from typing import cast

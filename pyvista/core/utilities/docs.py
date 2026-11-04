@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'inspect',
+    'os',
+    'os.path',
+    'pyvista',
+    'sys',
+    'typing',
+]
+
 import inspect
 import os
 import os.path as op

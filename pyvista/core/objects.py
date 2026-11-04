@@ -6,6 +6,19 @@ The data objects does not have any sort of spatial reference.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'numpy',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core.dataobject',
+    'pyvista.core.datasetattributes',
+    'pyvista.core.errors',
+    'pyvista.core.formatting_html',
+    'pyvista.core.utilities.arrays',
+    'typing',
+]
+
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 from typing import NoReturn

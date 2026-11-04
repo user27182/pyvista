@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista',
+    'pyvista.plotting.prop3d',
+    'pyvista.plotting.volume_property',
+    'typing',
+]
+
 from typing import TYPE_CHECKING
 
 from pyvista import _vtk

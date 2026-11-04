@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'numpy',
+    'numpy.typing',
+    'pyvista_validation.typing',
+    'typing',
+    'typing_extensions',
+]
+
 from collections.abc import Sequence
 from typing import Any
 from typing import TypeAlias

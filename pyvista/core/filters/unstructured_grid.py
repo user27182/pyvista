@@ -2,6 +2,16 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'numpy',
+    'pyvista',
+    'pyvista.core.filters',
+    'pyvista.core.filters.data_set',
+    'pyvista.core.filters.poly_data',
+    'pyvista.core.utilities.misc',
+    'typing',
+]
+
 from typing import TYPE_CHECKING
 
 import numpy as np

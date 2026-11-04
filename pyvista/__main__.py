@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista._cli',
+    'pyvista.core.errors',
+    'warnings',
+]
+
 import warnings
 
 from pyvista.core.errors import PyVistaDeprecationWarning

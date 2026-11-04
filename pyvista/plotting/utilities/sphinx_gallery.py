@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'inspect',
+    'pathlib',
+    'pyvista',
+    'shutil',
+    'typing',
+]
+
 import inspect
 from pathlib import Path
 import shutil

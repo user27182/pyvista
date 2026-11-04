@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'numpy',
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.errors',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.misc',
+    'traceback',
+    'typing',
+]
+
 import traceback
 from typing import TYPE_CHECKING
 from typing import Any

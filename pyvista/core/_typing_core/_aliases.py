@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'os',
+    'pyvista',
+    'pyvista.core._typing_core._array_types',
+    'pyvista_validation.typing',
+    'typing',
+]
+
 import os
 from typing import TYPE_CHECKING
 from typing import Literal

@@ -2,6 +2,16 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'numpy',
+    'pyvista',
+    'pyvista.core.errors',
+    'pyvista.core.filters',
+    'pyvista.core.utilities.misc',
+    'typing',
+]
+
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 

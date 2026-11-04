@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'pyvista',
+    'pyvista.core.dataobject',
+    'pyvista.core.errors',
+    'pyvista.core.formatting_html',
+    'pyvista.core.utilities.fileio',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.writer',
+    'typing',
+]
+
 from collections.abc import Iterable
 from collections.abc import MutableSequence
 from typing import TYPE_CHECKING

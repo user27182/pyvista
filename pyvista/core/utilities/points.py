@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'numpy',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista_validation',
+    'typing',
+]
+
 from typing import TYPE_CHECKING
 from typing import Literal
 from typing import cast

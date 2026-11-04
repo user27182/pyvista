@@ -2,6 +2,36 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'contextlib',
+    'functools',
+    'html',
+    'numpy',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core._typing_core',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.errors',
+    'pyvista.core.formatting_html',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.actor',
+    'pyvista.plotting.camera',
+    'pyvista.plotting.charts',
+    'pyvista.plotting.colors',
+    'pyvista.plotting.errors',
+    'pyvista.plotting.helpers',
+    'pyvista.plotting.mapper',
+    'pyvista.plotting.prop_collection',
+    'pyvista.plotting.render_passes',
+    'pyvista.plotting.tools',
+    'pyvista.plotting.utilities.gl_checks',
+    'pyvista_validation',
+    'typing',
+    'weakref',
+]
+
 from collections.abc import Iterable
 from collections.abc import Sequence
 import contextlib

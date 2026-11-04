@@ -32,6 +32,26 @@ pyvista.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'enum',
+    'json',
+    'os',
+    'pathlib',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core.config',
+    'pyvista.jupyter',
+    'pyvista.plotting',
+    'pyvista.plotting._typing',
+    'pyvista.plotting.colors',
+    'pyvista.plotting.interactor_style_registry',
+    'pyvista.plotting.opts',
+    'pyvista.plotting.theme_registry',
+    'pyvista.plotting.tools',
+    'pyvista_validation',
+    'typing',
+]
+
 from enum import Enum
 import json
 import os

@@ -2,6 +2,20 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'atexit',
+    'importlib.metadata',
+    'pathlib',
+    'pooch',
+    'pyvista._warn_external',
+    'pyvista.core.utilities._optional_formats',
+    'pyvista.core.utilities._registry_helpers',
+    'pyvista.core.utilities.reader',
+    'shutil',
+    'tempfile',
+    'typing',
+]
+
 import atexit
 from importlib.metadata import EntryPoint
 from importlib.metadata import entry_points

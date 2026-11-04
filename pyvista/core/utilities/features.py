@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'numpy',
+    'os',
+    'pyvista',
+    'pyvista.core.filters',
+    'pyvista.core.utilities.helpers',
+    'sys',
+    'typing',
+]
+
 from collections.abc import Sequence
 import os
 import sys

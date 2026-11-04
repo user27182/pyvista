@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.opts',
+    'typing',
+]
+
 from typing import TYPE_CHECKING
 
 from pyvista._warn_external import warn_external

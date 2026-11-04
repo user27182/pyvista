@@ -2,6 +2,27 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'abc',
+    'collections.abc',
+    'enum',
+    'functools',
+    'importlib',
+    'inspect',
+    'numpy',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core._typing_core._aliases',
+    'pyvista.core.errors',
+    'pyvista.core.utilities.accessor_registry',
+    'pyvista_validation',
+    'sys',
+    'threading',
+    'traceback',
+    'typing',
+    'warnings',
+]
+
 from abc import ABCMeta
 from collections.abc import Sequence
 from enum import Enum

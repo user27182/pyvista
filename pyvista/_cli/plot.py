@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'cyclopts',
+    'pyvista',
+    'pyvista._cli.app',
+    'pyvista._cli.utils',
+    'typing',
+]
+
 from typing import Annotated
 from typing import Any
 

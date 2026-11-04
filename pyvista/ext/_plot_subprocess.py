@@ -12,6 +12,23 @@ render in the Sphinx process itself.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'atexit',
+    'contextlib',
+    'importlib',
+    'json',
+    'multiprocessing',
+    'os',
+    'pyvista',
+    'pyvista.core.utilities.observers',
+    'pyvista.plotting.themes',
+    'subprocess',
+    'sys',
+    'traceback',
+    'typing',
+    'warnings',
+]
+
 import atexit
 import contextlib
 import importlib

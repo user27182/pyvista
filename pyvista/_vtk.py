@@ -9,6 +9,15 @@ imported on first access. We import from ``vtkmodules`` instead of
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'functools',
+    'importlib',
+    'importlib.util',
+    'os',
+    'pyvista.core.errors',
+    'typing',
+]
+
 import functools
 import importlib
 import importlib.util
