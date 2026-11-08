@@ -3930,6 +3930,7 @@ class PolyDataFilters(DataSetFilters):
 
         First, generate 30 points on circle and plot them.
 
+        >>> import numpy as np
         >>> import pyvista as pv
         >>> points = pv.Polygon(n_sides=30).points
         >>> circle = pv.PolyData(points)
@@ -3970,51 +3971,31 @@ class PolyDataFilters(DataSetFilters):
         >>> tess = comb.delaunay_2d(edge_source=comb)
         >>> tess.plot(cpos='xy', show_edges=True)
 
-        Reversing a hole's point order breaks the triangulation and warns.
+        A counter-clockwise polygon trims the triangulation to a concave
+        outline. Create the points of a star, ordered counter-clockwise by
+        increasing angle, and two clockwise holes inside it.
 
-        >>> import warnings
-        >>> one_reversed = circ0.flip_faces().append_polydata(circ1, squar)
-        >>> both_reversed = circ0.flip_faces().append_polydata(
-        ...     circ1.flip_faces(), squar
-        ... )
-        >>> with warnings.catch_warnings(record=True) as caught:
-        ...     warnings.simplefilter('always')
-        ...     tess_one = one_reversed.delaunay_2d(edge_source=one_reversed)
-        ...     tess_both = both_reversed.delaunay_2d(edge_source=both_reversed)
-        >>> for warning in caught:
-        ...     print(warning.message)
-        The edge_source polygons ... a clockwise polygon lies outside the counter-clockwise...
-        The edge_source polygons ... 2 polygons are counter-clockwise...
-        >>> pv.plot_compare(
-        ...     {
-        ...         'clockwise holes': tess,
-        ...         'one hole reversed': tess_one,
-        ...         'both holes reversed': tess_both,
-        ...     },
-        ...     show_edges=True,
-        ...     cpos='xy',
-        ... )
-
-        A counter-clockwise polygon trims the triangulation to a concave outline.
-
-        >>> import numpy as np
         >>> angles = np.linspace(0, 2 * np.pi, 10, endpoint=False)
         >>> radii = np.tile([8, 4], 5)
         >>> x, y = radii * np.cos(angles), radii * np.sin(angles)
         >>> star = np.column_stack([x, y, np.zeros(10)])
         >>> hole0 = pv.Polygon(center=(1.5, 1, 0), n_sides=30, radius=1)
         >>> hole1 = pv.Polygon(center=(-1.5, -1, 0), n_sides=30, radius=1)
+
+        Given as lines, the outline only constrains edges, so the
+        triangulation still fills its convex hull.
+
         >>> lines = pv.PolyData(star, lines=[11, *range(10), 0])
-        >>> polygon = pv.PolyData(star, faces=[10, *range(10)])
         >>> with_lines = hole0.append_polydata(hole1, lines)
+        >>> filled = with_lines.delaunay_2d(edge_source=with_lines)
+
+        Given as a polygon, the outline also removes everything outside it.
+
+        >>> polygon = pv.PolyData(star, faces=[10, *range(10)])
         >>> with_polygon = hole0.append_polydata(hole1, polygon)
+        >>> trimmed = with_polygon.delaunay_2d(edge_source=with_polygon)
         >>> pv.plot_compare(
-        ...     {
-        ...         'outline as lines': with_lines.delaunay_2d(edge_source=with_lines),
-        ...         'outline as polygon': with_polygon.delaunay_2d(
-        ...             edge_source=with_polygon
-        ...         ),
-        ...     },
+        ...     {'outline as lines': filled, 'outline as polygon': trimmed},
         ...     show_edges=True,
         ...     cpos='xy',
         ... )
