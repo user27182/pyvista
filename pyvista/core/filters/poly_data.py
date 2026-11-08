@@ -3894,11 +3894,13 @@ class PolyDataFilters(DataSetFilters):
             regions by the right-hand rule in the projection plane:
             order an outer boundary counter-clockwise and holes
             clockwise. Polygons are applied in order, so a region kept
-            inside a hole must come before the hole. VTK chooses which
-            side of the plane to view from, so input that is not flat
-            in a coordinate plane may need every polygon reversed. A
-            warning is emitted when the output does not follow the
-            winding, for example when a hole is wound the wrong way.
+            inside a hole must come before the hole. Input flat in the
+            xy, yz or zx plane is seen from +z, +x or +y, so in the xz
+            plane counter-clockwise turns from z toward x. For other
+            input VTK chooses the side, so every polygon may need
+            reversing. A warning is emitted when the output does not
+            follow the winding, for example when a hole is wound the
+            wrong way.
 
         progress_bar : bool, default: False
             Display a progress bar to indicate progress.
@@ -3920,10 +3922,10 @@ class PolyDataFilters(DataSetFilters):
         Warns
         -----
         UserWarning
-            If the points are coincident or collinear, ``edge_source`` has
-            triangle strips, repeats a point id within a cell, has edges
-            the triangulation does not contain, or has polygons whose
-            winding the output does not follow.
+            If there are fewer than three points, or they are coincident,
+            collinear or merged by ``tol``, or ``edge_source`` has triangle
+            strips, has edges the triangulation does not contain, or has
+            polygons whose winding the output does not follow.
 
         Examples
         --------

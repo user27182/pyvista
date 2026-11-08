@@ -41,9 +41,11 @@ def _delaunay_2d(
     decides which polygons are clockwise. With ``bound`` the projection is done here and
     undone afterwards, because VTK drops the bounding triangulation in best-fit mode.
     """
+    if edge_source is not None:
+        edge_source = pv.wrap(edge_source)
     _validate_input(mesh, edge_source)
-    if not bound and _points_are_degenerate(mesh):
-        output = pv.PolyData()
+    if _points_are_degenerate(mesh, bound=bound):
+        output = pv.wrap(_vtk.vtkPolyData())
         output.points = mesh.points.copy()
         _copy_point_and_field_data(mesh, output)
         return output
@@ -84,9 +86,22 @@ def _delaunay_2d(
         points[: mesh.n_points] = mesh.points
         output.points = points.astype(mesh.points.dtype)
         _copy_point_and_field_data(mesh, output)
-    if edge_source is not None:
-        filled = has_polygons and not any('Edge not recovered' in e.alert for e in events)
-        _check_edge_source(edge_source, output, matrix, alpha=alpha, filled=filled)
+    if edge_source is None:
+        if alpha == 0 and not use_bound and mesh.n_points and output.n_cells == 0:
+            warn_external(
+                'The points cannot be triangulated, so the output has no cells. Points closer '
+                'than tol are merged, so the rest may be collinear.'
+            )
+        return output
+    filled = has_polygons and not any('Edge not recovered' in e.alert for e in events)
+    fill = output
+    if filled and alpha > 0:
+        # Alpha removes triangles after the fill, so the fill is checked on its own
+        alg.SetAlpha(0)
+        with pv.vtk_verbosity('off'):
+            _update_alg(alg, progress_bar=progress_bar, message='Checking the polygon fill')
+        fill = _get_output(alg, output_type=pv.PolyData)
+    _check_edge_source(edge_source, output, matrix, alpha=alpha, filled=filled, fill=fill)
     return output
 
 
@@ -99,14 +114,19 @@ def _best_fitting_plane(mesh: DataSet) -> NDArray[np.float64]:
     return array_from_vtkmatrix(transform.GetMatrix())
 
 
-def _cell_edges(cells: _vtk.vtkCellArray, *, closed: bool) -> NDArray[np.int64]:
+def _cell_edges(
+    connectivity: NDArray[np.signedinteger],
+    offsets: NDArray[np.signedinteger],
+    *,
+    closed: bool,
+) -> NDArray[np.int64]:
     """Return the ``(n, 2)`` point id pairs along each cell, closing each cell if asked.
 
     Consecutive ids in the connectivity array are an edge unless the second one starts a
     new cell, which keeps this vectorized over all cells at once.
     """
-    connectivity = _vtk.vtk_to_numpy(cells.GetConnectivityArray()).astype(np.int64)
-    offsets = _vtk.vtk_to_numpy(cells.GetOffsetsArray()).astype(np.int64)
+    connectivity = connectivity.astype(np.int64)
+    offsets = offsets.astype(np.int64)
     starts, ends = offsets[:-1], offsets[1:]
     index = np.arange(max(connectivity.size - 1, 0))
     inside = np.isin(index + 1, ends, invert=True)
@@ -117,16 +137,20 @@ def _cell_edges(cells: _vtk.vtkCellArray, *, closed: bool) -> NDArray[np.int64]:
     return np.concatenate(edges)
 
 
+def _edge_source_edges(edge_source: PolyData) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+    """Return the edges of the lines and of the closed polygons of ``edge_source``."""
+    lines = _cell_edges(edge_source.line_connectivity, edge_source.line_offsets, closed=False)
+    polys = _cell_edges(edge_source.face_connectivity, edge_source.face_offsets, closed=True)
+    return lines, polys
+
+
 def _validate_input(mesh: DataSet, edge_source: PolyData | None) -> None:
     """Raise for unusable points or ``edge_source`` ids, and warn for ignored cells."""
-    if not np.isfinite(mesh.points).all():
-        msg = 'Points must be finite to be triangulated, but some are NaN or infinite.'
-        raise ValueError(msg)
+    _validation.check_finite(mesh.points, name='Points')
     if edge_source is None:
         return
     _validation.check_instance(edge_source, pv.PolyData, name='edge_source')
-    for cells in (edge_source.GetLines(), edge_source.GetPolys()):
-        ids = _vtk.vtk_to_numpy(cells.GetConnectivityArray())
+    for ids in (edge_source.line_connectivity, edge_source.face_connectivity):
         invalid = ids[(ids < 0) | (ids >= mesh.n_points)]
         if invalid.size:
             msg = (
@@ -137,38 +161,34 @@ def _validate_input(mesh: DataSet, edge_source: PolyData | None) -> None:
     if edge_source.n_strips:
         warn_external(
             'edge_source triangle strips are ignored. Only lines and polygons constrain the '
-            'triangulation, so convert strips with triangulate().'
-        )
-    edges = np.concatenate(
-        [
-            _cell_edges(edge_source.GetLines(), closed=False),
-            _cell_edges(edge_source.GetPolys(), closed=True),
-        ]
-    )
-    if np.any(edges[:, 0] == edges[:, 1]):
-        warn_external(
-            'edge_source repeats a point id in consecutive positions of a line or polygon. '
-            'The zero-length edge cannot be recovered, so remove the repeated id.'
+            'triangulation, so pass the strip edges as lines, for example with '
+            'extract_all_edges().'
         )
 
 
-def _points_are_degenerate(mesh: DataSet) -> bool:
-    """Return whether the points are coincident or collinear, warning if so.
+def _points_are_degenerate(mesh: DataSet, *, bound: bool) -> bool:
+    """Return whether the points cannot be triangulated, warning if so.
 
-    The second singular value of the centered points is their spread off the best line,
-    compared against a relative floor and the rounding noise of the stored coordinates.
+    VTK needs three points. The singular values of the centered points are their spread
+    along and off the best line, compared against a relative floor and the rounding noise
+    of the stored coordinates. Without ``bound`` the points must span a plane; with it,
+    the bounding points make collinear input triangulable, so only coincident points fail.
     """
     if mesh.n_points == 0:
         return False
-    points = mesh.points.astype(np.float64)
-    singular = np.linalg.svd(points - points.mean(axis=0), compute_uv=False)
-    # Rounding of the stored coordinates alone spreads points by about this much
-    noise = np.finfo(mesh.points.dtype).eps * np.abs(points).max() * np.sqrt(mesh.n_points)
-    if singular.size > 1 and singular[1] > max(1e-10 * singular[0], noise):
-        return False
+    if mesh.n_points >= 3:
+        # The (n, 3) SVD is linear in n; centering the float64 copy in place saves a copy
+        points = mesh.points.astype(np.float64)
+        points -= points.mean(axis=0)
+        singular = np.linalg.svd(points, compute_uv=False)
+        # Rounding of the stored coordinates alone spreads points by about this much
+        noise = np.finfo(mesh.points.dtype).eps * np.abs(mesh.points).max()
+        floor = max(1e-10 * singular[0], noise * np.sqrt(mesh.n_points))
+        if np.count_nonzero(singular > floor) >= (1 if bound else 2):
+            return False
     warn_external(
-        'The points are coincident or collinear, so they cannot be triangulated and the '
-        'output has no cells. At least three points that do not lie on one line are required.'
+        'The points cannot be triangulated, so the output has no cells. There must be at '
+        'least three points, and they must not all coincide or lie on one line.'
     )
     return True
 
@@ -195,19 +215,20 @@ def _check_edge_source(
     *,
     alpha: float,
     filled: bool,
+    fill: PolyData,
 ) -> None:
     """Warn for ``edge_source`` edges the output lacks and polygons it did not fill as wound.
 
     ``filled`` says VTK ran its polygon fill, which it skips entirely when any polygon
-    edge is unrecovered. After a fill, a missing polygon edge means both of its triangles
-    were removed, which the fill check reports, and a missing line may just lie inside a
-    removed region, which the locator rules out.
+    edge is unrecovered, and ``fill`` is the output before alpha pruned it. After a fill,
+    a missing polygon edge means both of its triangles were removed, which the fill check
+    reports, and a missing line may just lie inside a removed region, which the locator
+    rules out.
     """
     # Links on a shallow copy keep the point-to-cell cache off the returned mesh
     linked = output.copy(deep=False)
     linked.BuildLinks()
-    lines = _cell_edges(edge_source.GetLines(), closed=False)
-    polys = _cell_edges(edge_source.GetPolys(), closed=True)
+    lines, polys = _edge_source_edges(edge_source)
     missing_lines = _missing_edges(linked, lines, alpha=alpha)
     missing_polys = lines[:0]
     if filled:
@@ -218,13 +239,17 @@ def _check_edge_source(
     if n_missing:
         msg = (
             f'{n_missing} edge_source edges are not edges of the triangulation, so they do not '
-            'constrain it. Edges must not cross each other, and points closer than tol are merged.'
+            'constrain it. Edges must not cross each other or pass through other points, and '
+            'points closer than tol are merged.'
         )
         if len(missing_polys):
             msg += ' Since a polygon edge is missing, no polygon insides or holes are removed.'
         warn_external(msg)
-    if filled and alpha == 0 and matrix is not None:
-        _check_fill(linked, edge_source, flat=output.points @ matrix[:2, :3].T, polys=polys)
+    if filled and matrix is not None:
+        if fill is not output:
+            linked = fill.copy(deep=False)
+            linked.BuildLinks()
+        _check_fill(linked, edge_source, flat=fill.points @ matrix[:2, :3].T, polys=polys)
 
 
 def _missing_edges(
@@ -270,48 +295,78 @@ def _check_fill(
     of every edge and flood-removes the one right of it. The flood stops at triangles
     an earlier polygon kept, and a later polygon keeps its left triangles even inside a
     removed region, so a wrongly wound polygon leaves either an empty kept side or a
-    one-triangle ring whose inner neighbors are gone. Both are read from the output
-    with a few edge-neighbor lookups per polygon, so the cost is linear in the polygons.
+    one-triangle ring whose inner neighbors are gone. Both are read from the output with
+    one edge-neighbor lookup per polygon edge, and the geometry is vectorized, so the cost
+    is linear in the polygon edges. An edge on the convex hull has nothing beyond it, so
+    a missing triangle there is expected.
     """
-    faces = linked.regular_faces if linked.n_faces else np.empty((0, 3), dtype=np.int64)
-    # Sorted (p, q) pairs hashed to one int, for O(1) "is this edge a polygon edge"
-    stride = linked.n_points + 1
-    poly_keys = set((np.sort(polys, axis=1) @ [stride, 1]).tolist())
+    connectivity = edge_source.face_connectivity.astype(np.int64)
+    offsets = edge_source.face_offsets.astype(np.int64)
+    sizes = np.diff(offsets)
+    # Each polygon vertex paired with the next one around its polygon
+    following = np.arange(1, connectivity.size + 1)
+    following[offsets[1:] - 1] = offsets[:-1]
+    p, q = connectivity, connectivity[following]
+    # Shoelace signed area per polygon: positive is counter-clockwise in the projection plane
+    cross = flat[p, 0] * flat[q, 1] - flat[q, 0] * flat[p, 1]
+    ccw = (np.add.reduceat(cross, offsets[:-1]) > 0)[np.repeat(np.arange(sizes.size), sizes)]
+    distinct = p != q
+    p, q, ccw = p[distinct], q[distinct], ccw[distinct]
+
     neighbors = _vtk.vtkIdList()
-    problems: set[str] = set()
-    for ids in edge_source.irregular_faces:
-        ring = flat[ids]
-        # Shoelace signed area: positive is counter-clockwise in the projection plane
-        area = np.sum(ring[:, 0] * np.roll(ring[:, 1], -1) - np.roll(ring[:, 0], -1) * ring[:, 1])
-        kept, removed = ('inside', 'outside') if area > 0 else ('outside', 'inside')
-        wound = 'counter-clockwise' if area > 0 else 'clockwise'
-        n = len(ids)
-        # A wrong fill affects every edge of a polygon, so four samples bound the cost
-        for i in range(0, n, max(1, n // 4)):
-            p, q = int(ids[i]), int(ids[(i + 1) % n])
-            linked.GetCellEdgeNeighbors(-1, p, q, neighbors)
-            left = None
-            for j in range(neighbors.GetNumberOfIds()):
-                cell = neighbors.GetId(j)
-                tri = faces[cell]
-                r = int(tri[(tri != p) & (tri != q)][0])
-                a, b, c = flat[p], flat[q], flat[r]
-                # The fill keeps the triangle left of p->q and removes the one right of it
-                if (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]) > 0:
-                    left = (cell, r)
-                else:
-                    problems.add(f'triangles remain {removed} a {wound} polygon')
-            if left is None:
-                problems.add(f'triangles are missing {kept} a {wound} polygon')
-                continue
-            cell, r = left
-            # The kept triangle's other edges need neighbors too, unless another polygon owns them
-            for a, b in ((q, r), (r, p)):
-                if min(a, b) * stride + max(a, b) in poly_keys:
-                    continue
-                linked.GetCellEdgeNeighbors(cell, a, b, neighbors)
-                if neighbors.GetNumberOfIds() == 0:
-                    problems.add(f'triangles are missing {kept} a {wound} polygon')
+    cells, owners = [], []
+    for i, (a, b) in enumerate(zip(p.tolist(), q.tolist(), strict=True)):
+        linked.GetCellEdgeNeighbors(-1, a, b, neighbors)
+        for j in range(neighbors.GetNumberOfIds()):
+            cells.append(neighbors.GetId(j))
+            owners.append(i)
+    cell = np.array(cells, dtype=np.int64)
+    owner = np.array(owners, dtype=np.int64)
+    tri = linked.regular_faces[cell] if cell.size else np.empty((0, 3), dtype=np.int64)
+    a, b = p[owner], q[owner]
+    third = tri[np.arange(len(tri)), np.argmax((tri != a[:, None]) & (tri != b[:, None]), axis=1)]
+    # The fill keeps the triangle left of p->q and removes the one right of it
+    ab, ac = flat[b] - flat[a], flat[third] - flat[a]
+    left = ab[:, 0] * ac[:, 1] - ab[:, 1] * ac[:, 0] > 0
+    remains = np.zeros(p.size, dtype=bool)
+    remains[owner[~left]] = True
+    has_kept = np.zeros(p.size, dtype=bool)
+    has_kept[owner[left]] = True
+
+    # Off the hull, a polygon edge needs a kept triangle and that triangle's free edges a neighbor
+    stride = linked.n_points + 1
+    poly_keys = np.sort(polys, axis=1) @ [stride, 1]
+    candidates = [(i, p[i], q[i]) for i in np.flatnonzero(~has_kept).tolist()]
+    kept_cell, kept_owner = cell[left], owner[left]
+    for u, v in ((b[left], third[left]), (third[left], a[left])):
+        owned = np.isin(np.minimum(u, v) * stride + np.maximum(u, v), poly_keys)
+        for c, x, y, o in zip(
+            kept_cell[~owned].tolist(),
+            u[~owned].tolist(),
+            v[~owned].tolist(),
+            kept_owner[~owned].tolist(),
+            strict=True,
+        ):
+            linked.GetCellEdgeNeighbors(c, x, y, neighbors)
+            if neighbors.GetNumberOfIds() == 0:
+                candidates.append((o, x, y))
+    missing = np.zeros(p.size, dtype=bool)
+    on_hull: dict[tuple[int, int], bool] = {}
+    for o, x, y in candidates:
+        if missing[o]:
+            continue
+        key = (min(x, y), max(x, y))
+        if key not in on_hull:
+            on_hull[key] = _on_hull(flat, x, y)
+        missing[o] = not on_hull[key]
+
+    problems = set() if linked.n_cells else {'every triangle was removed'}
+    for wound_ccw in np.unique(ccw[missing]).tolist():
+        side, wound = ('inside', 'counter-clockwise') if wound_ccw else ('outside', 'clockwise')
+        problems.add(f'triangles are missing {side} a {wound} polygon')
+    for wound_ccw in np.unique(ccw[remains]).tolist():
+        side, wound = ('outside', 'counter-clockwise') if wound_ccw else ('inside', 'clockwise')
+        problems.add(f'triangles remain {side} a {wound} polygon')
     if problems:
         found = ' and '.join(sorted(problems))
         msg = (
@@ -320,3 +375,12 @@ def _check_fill(
             'which may view the input from either side.'
         )
         warn_external(msg)
+
+
+def _on_hull(flat: NDArray[np.float64], a: int, b: int) -> bool:
+    """Return whether every point lies on one side of the line through ``a`` and ``b``."""
+    direction = flat[b] - flat[a]
+    offset = flat - flat[a]
+    side = direction[0] * offset[:, 1] - direction[1] * offset[:, 0]
+    tol = 1e-9 * np.abs(side).max()
+    return bool(side.min() >= -tol or side.max() <= tol)

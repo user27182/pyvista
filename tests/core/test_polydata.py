@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import math
 from pathlib import Path
 import re
@@ -1755,6 +1756,19 @@ def _winding_edge_source(case: str) -> pv.PolyData:
             [[-8.0, -8, 0], [8, -8, 0], [8, 8, 0], [-8, 8, 0], [-4, -2, 0], [-2, -4, 0]],
             faces=[4, 0, 1, 2, 3, 3, 0, 4, 5],
         ),
+        'hole_touching_hull': pv.PolyData(
+            [[-8.0, -8, 0], [8, -8, 0], [8, 8, 0], [-8, 8, 0], [-4, -2, 0], [-2, -4, 0]],
+            lines=[5, 0, 1, 2, 3, 0],
+            faces=[3, 0, 4, 5],
+        ),
+        'hole_edge_on_hull': pv.PolyData(
+            [[-8.0, -8, 0], [8, -8, 0], [8, 8, 0], [-8, 8, 0], [0, -4, 0]],
+            lines=[5, 0, 1, 2, 3, 0],
+            faces=[3, 0, 4, 1],
+        ),
+        'holes_in_lines_mirrored': hole0.append_polydata(hole1, outline).rotate_x(
+            180, inplace=False
+        ),
         'island_then_hole': boundary.append_polydata(island, big_hole),
         'hole_then_island': boundary.append_polydata(big_hole, island),
     }
@@ -1769,6 +1783,8 @@ def _winding_edge_source(case: str) -> pv.PolyData:
         'holes_in_lines',
         'boundary_only',
         'hole_touching_boundary',
+        'hole_touching_hull',
+        'hole_edge_on_hull',
         'island_then_hole',
     ],
 )
@@ -1776,12 +1792,15 @@ def test_delaunay_2d_edge_source_winding_valid(case):
     source = _winding_edge_source(case)
     surf = source.delaunay_2d(edge_source=source)
     assert surf.n_cells
+    areas = {'hole_touching_hull': 246.0, 'hole_edge_on_hull': 224.0}
+    if case in areas:
+        assert np.isclose(surf.area, areas[case])
 
 
 def test_delaunay_2d_raises_non_finite_points():
     mesh = pv.Polygon(n_sides=6)
     mesh.points[0] = np.nan
-    with pytest.raises(ValueError, match='Points must be finite'):
+    with pytest.raises(ValueError, match='Points must have finite values'):
         mesh.delaunay_2d()
 
 
@@ -1809,6 +1828,8 @@ def test_delaunay_2d_edge_source_strips_warn():
     strips = pv.Plane(i_resolution=3, j_resolution=1).triangulate().strip()
     with pytest.warns(UserWarning, match='triangle strips are ignored'):
         strips.delaunay_2d(edge_source=strips)
+    edges = strips.extract_all_edges()
+    assert np.isclose(strips.delaunay_2d(edge_source=edges).area, strips.area)
 
 
 def test_delaunay_2d_edge_source_vertices_ignored_silently():
@@ -1819,14 +1840,30 @@ def test_delaunay_2d_edge_source_vertices_ignored_silently():
     assert with_vertices.delaunay_2d(edge_source=with_vertices).n_cells
 
 
-def test_delaunay_2d_edge_source_repeated_id_warns():
+def test_delaunay_2d_edge_source_repeated_id():
     source = _winding_edge_source('boundary_only')
-    repeated = pv.PolyData(source.points, faces=[11, *range(10), 0])
-    with (
-        pytest.warns(UserWarning, match='repeats a point id in consecutive positions'),
-        pytest.warns(UserWarning, match='polygons were not filled as wound'),
-    ):
-        repeated.delaunay_2d(edge_source=repeated)
+    clean = source.delaunay_2d(edge_source=source)
+    repeated = pv.PolyData(source.points, faces=[11, 0, 1, 1, *range(2, 10)])
+    assert repeated.delaunay_2d(edge_source=repeated).n_cells == clean.n_cells
+    closed = pv.PolyData(source.points, faces=[11, *range(10), 0])
+    with pytest.warns(UserWarning, match='polygons were not filled as wound'):
+        closed.delaunay_2d(edge_source=closed)
+
+
+@pytest.mark.parametrize('tol', [1e-5, 2.0])
+def test_delaunay_2d_merged_points_warn(tol):
+    points = [[0.0, 0, 0], [1, 0, 0], [2, 0, 0], [1, 1e-6, 0]] if tol < 1 else pv.Triangle().points
+    with pytest.warns(UserWarning, match='Points closer than tol are merged'):
+        assert pv.PolyData(points).delaunay_2d(tol=tol).n_cells == 0
+
+
+def test_delaunay_2d_edge_source_winding_alpha_warns():
+    source = _winding_edge_source('hole_reversed')
+    with pytest.warns(UserWarning, match='polygons were not filled as wound'):
+        surf = source.delaunay_2d(edge_source=source, alpha=100)
+    with pytest.warns(UserWarning, match='polygons were not filled as wound'):
+        reference = source.delaunay_2d(edge_source=source)
+    assert surf.n_faces == reference.n_faces
 
 
 @pytest.mark.parametrize(
@@ -1840,11 +1877,14 @@ def test_delaunay_2d_edge_source_repeated_id_warns():
     ],
     ids=['one', 'two', 'collinear', 'coincident', 'collinear_float32_offset'],
 )
-def test_delaunay_2d_degenerate_points_warn(points):
+@pytest.mark.parametrize('bound', [False, True])
+def test_delaunay_2d_degenerate_points_warn(points, bound):
     mesh = pv.PolyData(points)
     mesh.point_data['data'] = np.arange(mesh.n_points)
-    with pytest.warns(UserWarning, match='coincident or collinear'):
-        result = mesh.delaunay_2d()
+    if bound and mesh.n_points >= 3 and np.ptp(mesh.points, axis=0).any():
+        pytest.skip('collinear points are triangulable with bound')
+    with pytest.warns(UserWarning, match='The points cannot be triangulated'):
+        result = mesh.delaunay_2d(bound=bound)
     assert result.n_cells == 0
     assert np.array_equal(result.points, mesh.points)
     assert np.array_equal(result.point_data['data'], mesh.point_data['data'])
@@ -2005,7 +2045,9 @@ def test_delaunay_2d_unstructured_grid_inplace():
 @pytest.mark.parametrize('case', ['boundary_and_holes', 'hole_only'])
 def test_delaunay_2d_edge_source_winding_alpha_empty(case):
     source = _winding_edge_source(case)
-    surf = source.delaunay_2d(edge_source=source, alpha=1e-6)
+    warns = pytest.warns(UserWarning, match='every triangle was removed')
+    with warns if case == 'hole_only' else contextlib.nullcontext():
+        surf = source.delaunay_2d(edge_source=source, alpha=1e-6)
     assert surf.n_faces == 0
     assert surf.n_verts == source.n_points
 
@@ -2017,14 +2059,15 @@ def test_delaunay_2d_edge_source_winding_alpha_empty(case):
         ('holes_reversed', 'triangles are missing inside a counter-clockwise polygon'),
         ('hole_outside_boundary', 'triangles are missing outside a clockwise polygon'),
         ('boundary_reversed', 'triangles are missing outside a clockwise polygon'),
-        ('boundary_and_holes_xz', 'missing inside a counter-clockwise polygon and .* outside'),
+        ('boundary_and_holes_xz', 'missing inside a counter-clockwise polygon'),
         (
             'boundary_and_holes_flipped',
-            'missing inside a counter-clockwise polygon and .* outside',
+            'missing inside a counter-clockwise polygon',
         ),
-        ('all_reversed', 'missing inside a counter-clockwise polygon and .* outside'),
-        ('hole_only', 'triangles are missing outside a clockwise polygon'),
+        ('all_reversed', 'missing inside a counter-clockwise polygon'),
+        ('hole_only', 'every triangle was removed'),
         ('hole_then_island', 'triangles are missing inside a counter-clockwise polygon'),
+        ('holes_in_lines_mirrored', 'triangles are missing inside a counter-clockwise polygon'),
     ],
 )
 def test_delaunay_2d_edge_source_winding_warns(case, match):
