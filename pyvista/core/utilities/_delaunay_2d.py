@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
     from pyvista import DataSet
     from pyvista import PolyData
+    from pyvista.core.utilities.observers import VtkEvent
 
 
 def _delaunay_2d(
@@ -57,10 +58,12 @@ def _delaunay_2d(
     alg.SetBoundingTriangulation(use_bound)
     if edge_source is not None:
         alg.SetSourceData(edge_source)
+    events: list[VtkEvent] = []
     if has_polygons:
         with pv.vtk_verbosity('off'), pv.VtkErrorCatcher(send_to_logging=False) as catcher:
             _update_alg(alg, progress_bar=progress_bar, message='Computing 2D Triangulation')
-        for event in catcher.events:
+        events = catcher.events
+        for event in events:
             if 'Edge not recovered' not in event.alert:
                 warn_external(event.alert, VTKExecutionWarning)
     else:
@@ -74,10 +77,8 @@ def _delaunay_2d(
         output.points = points.astype(mesh.points.dtype)
         _copy_point_and_field_data(mesh, output)
     if edge_source is not None:
-        _check_constraint_edges(edge_source, output, matrix, alpha=alpha)
-    if edge_source is not None and matrix is not None and has_polygons:
-        emptied = output.n_cells == 0 and alpha == 0
-        _check_winding(mesh, edge_source, matrix, emptied=emptied)
+        filled = has_polygons and not any('Edge not recovered' in e.alert for e in events)
+        _check_edge_source(edge_source, output, matrix, alpha=alpha, filled=filled)
     return output
 
 
@@ -171,101 +172,114 @@ def _copy_point_and_field_data(mesh: DataSet, output: PolyData) -> None:
         output.field_data[name] = mesh.field_data[name]
 
 
-def _check_constraint_edges(
-    edge_source: PolyData, output: PolyData, matrix: NDArray[np.float64] | None, *, alpha: float
+def _check_edge_source(
+    edge_source: PolyData,
+    output: PolyData,
+    matrix: NDArray[np.float64] | None,
+    *,
+    alpha: float,
+    filled: bool,
 ) -> None:
-    """Warn when ``edge_source`` edges were not recovered by the triangulation."""
-    found = np.concatenate(
-        [_cell_edges(output.GetPolys(), closed=True), _cell_edges(output.GetLines(), closed=False)]
-    )
-    stride = [output.n_points + 1, 1]
-    found_keys = np.sort(found, axis=1) @ stride
-    covered = None
-    if matrix is not None and output.n_faces:
-        flat = output.points @ matrix[:2, :3].T
-        covered = pv.PolyData.from_regular_faces(
-            np.column_stack([flat, np.zeros(len(flat))]), output.regular_faces
-        )
-
-    def _unrecovered(edges: NDArray[np.int64]) -> int:
-        """Return how many non-degenerate edges are missing from the output."""
-        edges = edges[edges[:, 0] != edges[:, 1]]
-        edges = edges[np.isin(np.sort(edges, axis=1) @ stride, found_keys, invert=True)]
-        if alpha > 0:
-            lengths = np.linalg.norm(np.diff(output.points[edges], axis=1)[:, 0], axis=1)
-            edges = edges[lengths / 2 <= alpha]
-        if matrix is None or not len(edges):
-            return len(edges)
-        if covered is None:
-            return 0
-        # Edges inside removed polygon regions are absent, not unrecovered
-        midpoints = covered.points[edges].mean(axis=1)
-        return int(np.count_nonzero(covered.find_containing_cell(midpoints) >= 0))
-
-    n_lines = _unrecovered(_cell_edges(edge_source.GetLines(), closed=False))
-    n_polys = _unrecovered(_cell_edges(edge_source.GetPolys(), closed=True))
-    if not n_lines + n_polys:
-        return
-    msg = (
-        f'{n_lines + n_polys} edge_source edges are not edges of the triangulation, so they do '
-        'not constrain it. Edges must not cross each other, and points closer than tol are merged.'
-    )
-    if n_polys:
-        msg += ' Since a polygon edge is missing, no polygon insides or holes are removed.'
-    warn_external(msg)
-
-
-def _check_winding(
-    mesh: DataSet, edge_source: PolyData, matrix: NDArray[np.float64], *, emptied: bool
-) -> None:
-    """Warn when ``edge_source`` polygons are not one outer boundary with holes."""
-    points = mesh.points @ matrix[:2, :3].T
-    rings = [points[ids] for ids in edge_source.irregular_faces]
-    areas = [
-        np.sum(r[:, 0] * np.roll(r[:, 1], -1) - np.roll(r[:, 0], -1) * r[:, 1]) for r in rings
-    ]
-    ccw = [r for r, area in zip(rings, areas, strict=True) if area > 0]
-    cw = [r for r, area in zip(rings, areas, strict=True) if area < 0]
-    advice = (
-        'Order at most one outer boundary counter-clockwise and the holes inside it '
-        'clockwise, as seen from the projection plane.'
-    )
-    if len(cw) == 1 and ccw and all(_ring_in_ring(r, cw[0]) for r in ccw):
-        problem = 'every polygon is wound opposite to the projection plane'
-        advice = 'Reverse all of them, for example with flip_faces().'
-    elif len(ccw) > 1:
-        problem = f'{len(ccw)} polygons are counter-clockwise'
-    elif ccw and not all(_ring_in_ring(r, ccw[0]) for r in cw):
-        problem = 'a clockwise polygon lies outside the counter-clockwise polygon'
-    elif _any_ring_nested(cw):
-        problem = 'a clockwise polygon lies inside another clockwise polygon'
-    elif not ccw and emptied:
-        problem = 'every polygon is clockwise, so the whole triangulation is a hole'
+    """Warn for ``edge_source`` edges the output lacks and polygons it did not fill as wound."""
+    linked = output.copy(deep=False)
+    linked.BuildLinks()
+    lines = _cell_edges(edge_source.GetLines(), closed=False)
+    polys = _cell_edges(edge_source.GetPolys(), closed=True)
+    missing_lines = _missing_edges(linked, lines, alpha=alpha)
+    missing_polys = lines[:0]
+    if filled:
+        missing_lines = _outside_removed_regions(missing_lines, output, matrix)
     else:
-        return
-    msg = f'The edge_source polygons cannot be triangulated as intended: {problem}. {advice}'
-    warn_external(msg)
+        missing_polys = _missing_edges(linked, polys, alpha=alpha)
+    n_missing = len(missing_lines) + len(missing_polys)
+    if n_missing:
+        msg = (
+            f'{n_missing} edge_source edges are not edges of the triangulation, so they do not '
+            'constrain it. Edges must not cross each other, and points closer than tol are merged.'
+        )
+        if len(missing_polys):
+            msg += ' Since a polygon edge is missing, no polygon insides or holes are removed.'
+        warn_external(msg)
+    if filled and alpha == 0 and matrix is not None:
+        _check_fill(linked, edge_source, flat=output.points @ matrix[:2, :3].T, polys=polys)
 
 
-def _ring_in_ring(ring: NDArray[np.float64], other: NDArray[np.float64]) -> bool:
-    """Return whether most of a sample of a 2D ring's vertices lie inside another 2D ring."""
-    sample = ring[:: max(1, len(ring) // 32)]
-    x, y = sample[:, :1], sample[:, 1:]
-    x0, y0 = other[:, 0], other[:, 1]
-    x1, y1 = np.roll(x0, -1), np.roll(y0, -1)
-    straddles = (y0 > y) != (y1 > y)
-    with np.errstate(divide='ignore', invalid='ignore'):
-        crossing_x = x0 + (y - y0) * (x1 - x0) / (y1 - y0)
-    inside = np.count_nonzero(straddles & (x < crossing_x), axis=1) % 2 == 1
-    return bool(np.mean(inside) > 0.5)
+def _missing_edges(
+    linked: PolyData, edges: NDArray[np.int64], *, alpha: float
+) -> NDArray[np.int64]:
+    """Return the non-degenerate edges that ``linked`` lacks and that ``alpha`` would keep."""
+    edges = edges[edges[:, 0] != edges[:, 1]]
+    edges = edges[[not linked.IsEdge(p, q) for p, q in edges.tolist()]]
+    if alpha > 0 and len(edges):
+        lengths = np.linalg.norm(np.diff(linked.points[edges], axis=1)[:, 0], axis=1)
+        edges = edges[lengths / 2 <= alpha]
+    return edges
 
 
-def _any_ring_nested(rings: list[NDArray[np.float64]]) -> bool:
-    """Return whether any 2D ring lies inside another one."""
-    if len(rings) < 2:
-        return False
-    lower = np.array([r.min(axis=0) for r in rings])
-    upper = np.array([r.max(axis=0) for r in rings])
-    overlap = np.all((lower[:, None] <= upper[None]) & (upper[:, None] >= lower[None]), axis=2)
-    np.fill_diagonal(overlap, val=False)
-    return any(_ring_in_ring(rings[i], rings[j]) for i, j in np.argwhere(overlap))
+def _outside_removed_regions(
+    edges: NDArray[np.int64], output: PolyData, matrix: NDArray[np.float64] | None
+) -> NDArray[np.int64]:
+    """Return the edges whose midpoint still lies on a triangle after the polygon fill."""
+    if not len(edges) or matrix is None:
+        return edges
+    if not output.n_faces:
+        return edges[:0]
+    flat = output.points @ matrix[:2, :3].T
+    covered = pv.PolyData.from_regular_faces(
+        np.column_stack([flat, np.zeros(len(flat))]), output.regular_faces
+    )
+    midpoints = covered.points[edges].mean(axis=1)
+    return edges[covered.find_containing_cell(midpoints) >= 0]
+
+
+def _check_fill(
+    linked: PolyData,
+    edge_source: PolyData,
+    *,
+    flat: NDArray[np.float64],
+    polys: NDArray[np.int64],
+) -> None:
+    """Warn when triangles are missing on the side a polygon keeps, or remain on the other."""
+    faces = linked.regular_faces if linked.n_faces else np.empty((0, 3), dtype=np.int64)
+    stride = linked.n_points + 1
+    poly_keys = set((np.sort(polys, axis=1) @ [stride, 1]).tolist())
+    neighbors = _vtk.vtkIdList()
+    problems: set[str] = set()
+    for ids in edge_source.irregular_faces:
+        ring = flat[ids]
+        area = np.sum(ring[:, 0] * np.roll(ring[:, 1], -1) - np.roll(ring[:, 0], -1) * ring[:, 1])
+        kept, removed = ('inside', 'outside') if area > 0 else ('outside', 'inside')
+        wound = 'counter-clockwise' if area > 0 else 'clockwise'
+        n = len(ids)
+        for i in range(0, n, max(1, n // 4)):
+            p, q = int(ids[i]), int(ids[(i + 1) % n])
+            linked.GetCellEdgeNeighbors(-1, p, q, neighbors)
+            left = None
+            for j in range(neighbors.GetNumberOfIds()):
+                cell = neighbors.GetId(j)
+                tri = faces[cell]
+                r = int(tri[(tri != p) & (tri != q)][0])
+                a, b, c = flat[p], flat[q], flat[r]
+                # The fill keeps the triangle left of p->q and removes the one right of it
+                if (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]) > 0:
+                    left = (cell, r)
+                else:
+                    problems.add(f'triangles remain {removed} a {wound} polygon')
+            if left is None:
+                problems.add(f'triangles are missing {kept} a {wound} polygon')
+                continue
+            cell, r = left
+            for a, b in ((q, r), (r, p)):
+                if min(a, b) * stride + max(a, b) in poly_keys:
+                    continue
+                linked.GetCellEdgeNeighbors(cell, a, b, neighbors)
+                if neighbors.GetNumberOfIds() == 0:
+                    problems.add(f'triangles are missing {kept} a {wound} polygon')
+    if problems:
+        found = ' and '.join(sorted(problems))
+        msg = (
+            f'The edge_source polygons were not filled as wound: {found}. Order the outer '
+            'boundary counter-clockwise and holes clockwise as seen from the projection plane, '
+            'which may view the input from either side.'
+        )
+        warn_external(msg)

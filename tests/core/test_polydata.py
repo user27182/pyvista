@@ -1728,6 +1728,8 @@ def _winding_edge_source(case: str) -> pv.PolyData:
     hole0 = pv.Polygon(center=(1.5, 1, 0), n_sides=30, radius=1)
     hole1 = pv.Polygon(center=(-1.5, -1, 0), n_sides=30, radius=1)
     far = pv.Polygon(center=(20, 0, 0), n_sides=30, radius=1)
+    big_hole = pv.Polygon(n_sides=30, radius=3)
+    island = pv.Polygon(n_sides=20, radius=1.5).flip_faces()
     sources = {
         'boundary_and_holes': hole0.append_polydata(hole1, boundary),
         'boundary_and_holes_tilted': hole0.append_polydata(hole1, boundary)
@@ -1753,6 +1755,8 @@ def _winding_edge_source(case: str) -> pv.PolyData:
             [[-8.0, -8, 0], [8, -8, 0], [8, 8, 0], [-8, 8, 0], [-4, -2, 0], [-2, -4, 0]],
             faces=[4, 0, 1, 2, 3, 3, 0, 4, 5],
         ),
+        'island_then_hole': boundary.append_polydata(island, big_hole),
+        'hole_then_island': boundary.append_polydata(big_hole, island),
     }
     return sources[case]
 
@@ -1765,6 +1769,7 @@ def _winding_edge_source(case: str) -> pv.PolyData:
         'holes_in_lines',
         'boundary_only',
         'hole_touching_boundary',
+        'island_then_hole',
     ],
 )
 def test_delaunay_2d_edge_source_winding_valid(case):
@@ -1817,7 +1822,10 @@ def test_delaunay_2d_edge_source_vertices_ignored_silently():
 def test_delaunay_2d_edge_source_repeated_id_warns():
     source = _winding_edge_source('boundary_only')
     repeated = pv.PolyData(source.points, faces=[11, *range(10), 0])
-    with pytest.warns(UserWarning, match='repeats a point id in consecutive positions'):
+    with (
+        pytest.warns(UserWarning, match='repeats a point id in consecutive positions'),
+        pytest.warns(UserWarning, match='polygons were not filled as wound'),
+    ):
         repeated.delaunay_2d(edge_source=repeated)
 
 
@@ -2005,20 +2013,31 @@ def test_delaunay_2d_edge_source_winding_alpha_empty(case):
 @pytest.mark.parametrize(
     ('case', 'match'),
     [
-        ('hole_reversed', 'a clockwise polygon lies outside the counter-clockwise polygon'),
-        ('holes_reversed', '2 polygons are counter-clockwise'),
-        ('hole_outside_boundary', 'a clockwise polygon lies outside the counter-clockwise'),
-        ('boundary_reversed', 'a clockwise polygon lies inside another clockwise polygon'),
-        ('boundary_and_holes_xz', 'every polygon is wound opposite to the projection plane'),
-        ('boundary_and_holes_flipped', 'every polygon is wound opposite to the projection plane'),
-        ('all_reversed', 'every polygon is wound opposite to the projection plane'),
-        ('hole_only', 'the whole triangulation is a hole'),
+        ('hole_reversed', 'triangles are missing outside a clockwise polygon'),
+        ('holes_reversed', 'triangles are missing inside a counter-clockwise polygon'),
+        ('hole_outside_boundary', 'triangles are missing outside a clockwise polygon'),
+        ('boundary_reversed', 'triangles are missing outside a clockwise polygon'),
+        ('boundary_and_holes_xz', 'missing inside a counter-clockwise polygon and .* outside'),
+        (
+            'boundary_and_holes_flipped',
+            'missing inside a counter-clockwise polygon and .* outside',
+        ),
+        ('all_reversed', 'missing inside a counter-clockwise polygon and .* outside'),
+        ('hole_only', 'triangles are missing outside a clockwise polygon'),
+        ('hole_then_island', 'triangles are missing inside a counter-clockwise polygon'),
     ],
 )
 def test_delaunay_2d_edge_source_winding_warns(case, match):
     source = _winding_edge_source(case)
     with pytest.warns(UserWarning, match=match):
         source.delaunay_2d(edge_source=source)
+
+
+def test_delaunay_2d_edge_source_unrecovered_polygon_skips_fill_check():
+    source = _winding_edge_source('hole_only')
+    crossing = pv.PolyData(source.points, faces=[*source.faces, 4, 0, 15, 1, 16])
+    with pytest.warns(UserWarning, match='no polygon insides or holes are removed'):
+        crossing.delaunay_2d(edge_source=crossing)
 
 
 def test_lines():

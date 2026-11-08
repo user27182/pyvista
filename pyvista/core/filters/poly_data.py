@@ -3893,10 +3893,12 @@ class PolyDataFilters(DataSetFilters):
             source). Lines only constrain edges. Polygons define
             regions by the right-hand rule in the projection plane:
             order an outer boundary counter-clockwise and holes
-            clockwise. VTK chooses which side of the plane to view
-            from, so input that is not flat in a coordinate plane may
-            need every polygon reversed. A warning is emitted when the
-            polygons cannot be triangulated this way.
+            clockwise. Polygons are applied in order, so a region kept
+            inside a hole must come before the hole. VTK chooses which
+            side of the plane to view from, so input that is not flat
+            in a coordinate plane may need every polygon reversed. A
+            warning is emitted when the output does not follow the
+            winding, for example when a hole is wound the wrong way.
 
         progress_bar : bool, default: False
             Display a progress bar to indicate progress.
@@ -3920,8 +3922,8 @@ class PolyDataFilters(DataSetFilters):
         UserWarning
             If the points are coincident or collinear, ``edge_source`` has
             triangle strips, repeats a point id within a cell, has edges
-            the triangulation does not contain, or has polygons wound so
-            that they cannot be triangulated as one boundary with holes.
+            the triangulation does not contain, or has polygons whose
+            winding the output does not follow.
 
         Examples
         --------
