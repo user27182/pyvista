@@ -24,6 +24,8 @@ from pyvista.core.filters import _get_output
 from pyvista.core.filters import _update_alg
 from pyvista.core.filters.data_object import _copy_active_attributes
 from pyvista.core.filters.data_set import DataSetFilters
+from pyvista.core.utilities._delaunay_2d import _copy_onto
+from pyvista.core.utilities._delaunay_2d import _delaunay_2d
 from pyvista.core.utilities._strip import _StripTrace
 from pyvista.core.utilities.arrays import CellLiteral
 from pyvista.core.utilities.arrays import FieldAssociation
@@ -3862,19 +3864,22 @@ class PolyDataFilters(DataSetFilters):
             Specify alpha (or distance) value to control output of
             this filter. For a non-zero alpha value, only edges or
             triangles contained within a sphere centered at mesh
-            vertices will be output. Otherwise, only triangles will be
-            output.
+            vertices will be output. Edges are output as lines, and
+            points used by no edge or triangle as vertices. Otherwise,
+            only triangles will be output.
 
         offset : float, default: 1.0
             Specify a multiplier to control the size of the initial,
             bounding Delaunay triangulation.
 
         bound : bool, default: False
-            Boolean controls whether bounding triangulation points
-            and associated triangles are included in the
-            output. These are introduced as an initial triangulation
-            to begin the triangulation process. This feature is nice
-            for debugging output.
+            Include the bounding triangulation in the output. The
+            triangulation starts from eight points around the input,
+            ``offset`` times its size away, and inserts the points
+            into it. These eight points and their triangles are
+            appended to the output. Their point data is NaN for
+            floating point arrays and zero or empty otherwise. This
+            is useful for debugging.
 
         inplace : bool, default: False
             If ``True``, overwrite this mesh with the triangulated
@@ -3886,7 +3891,13 @@ class PolyDataFilters(DataSetFilters):
             constrained triangulation is created. The lines/polygons
             are assumed to reference points in the input point set
             (that is, point ids are identical in the input and
-            source).
+            source). Lines only constrain edges. Polygons define
+            regions by the right-hand rule in the projection plane:
+            order an outer boundary counter-clockwise and holes
+            clockwise. VTK chooses which side of the plane to view
+            from, so input that is not flat in a coordinate plane may
+            need every polygon reversed. A warning is emitted when the
+            polygons cannot be triangulated this way.
 
         progress_bar : bool, default: False
             Display a progress bar to indicate progress.
@@ -3895,6 +3906,23 @@ class PolyDataFilters(DataSetFilters):
         -------
         pyvista.PolyData
             Mesh from the 2D Delaunay filter.
+
+        Raises
+        ------
+        TypeError
+            If ``edge_source`` is not a :class:`~pyvista.PolyData`.
+
+        ValueError
+            If a point is not finite, or ``edge_source`` references a point
+            id that the input does not have.
+
+        Warns
+        -----
+        UserWarning
+            If the points are coincident or collinear, ``edge_source`` has
+            triangle strips, repeats a point id within a cell, has edges
+            the triangulation does not contain, or has polygons wound so
+            that they cannot be triangulated as one boundary with holes.
 
         Examples
         --------
@@ -3912,8 +3940,27 @@ class PolyDataFilters(DataSetFilters):
         >>> filled_circle = circle.delaunay_2d()
         >>> filled_circle.plot(show_edges=True, line_width=5)
 
+        Keep the bounding triangulation the points are inserted into. It adds
+        eight points, and ``offset`` sets how far away they are.
+
+        >>> bounded = circle.delaunay_2d(bound=True)
+        >>> bounded.n_points - circle.n_points
+        8
+        >>> pv.plot_compare(
+        ...     {
+        ...         'bound=True': bounded,
+        ...         'bound=True, offset=3': circle.delaunay_2d(bound=True, offset=3),
+        ...     },
+        ...     reference_mesh=circle,
+        ...     reference_kwargs={'color': 'red', 'point_size': 8},
+        ...     show_edges=True,
+        ...     cpos='xy',
+        ... )
+
         Use the ``edge_source`` parameter to create a constrained Delaunay
-        triangulation and plot it.
+        triangulation and plot it. The square is made of lines, so it only
+        constrains edges. The circles are polygons ordered clockwise, so
+        they become holes.
 
         >>> squar = pv.Polygon(n_sides=4, radius=8, fill=False)
         >>> squar = squar.rotate_z(45, inplace=False)
@@ -3923,23 +3970,67 @@ class PolyDataFilters(DataSetFilters):
         >>> tess = comb.delaunay_2d(edge_source=comb)
         >>> tess.plot(cpos='xy', show_edges=True)
 
-        """
-        alg = _vtk.vtkDelaunay2D()
-        alg.SetProjectionPlaneMode(_vtk.VTK_BEST_FITTING_PLANE)
-        alg.SetInputDataObject(self)
-        alg.SetTolerance(tol)
-        alg.SetAlpha(alpha)
-        alg.SetOffset(offset)
-        alg.SetBoundingTriangulation(bound)
-        if edge_source is not None:
-            alg.SetSourceData(edge_source)
-        _update_alg(alg, progress_bar=progress_bar, message='Computing 2D Triangulation')
+        Reversing a hole's point order breaks the triangulation and warns.
 
-        # Sometimes lines are given in the output. The
-        # `.triangulate()` filter cleans those
-        mesh = _get_output(alg, output_type=pv.PolyData).triangulate()
+        >>> import warnings
+        >>> one_reversed = circ0.flip_faces().append_polydata(circ1, squar)
+        >>> both_reversed = circ0.flip_faces().append_polydata(
+        ...     circ1.flip_faces(), squar
+        ... )
+        >>> with warnings.catch_warnings(record=True) as caught:
+        ...     warnings.simplefilter('always')
+        ...     tess_one = one_reversed.delaunay_2d(edge_source=one_reversed)
+        ...     tess_both = both_reversed.delaunay_2d(edge_source=both_reversed)
+        >>> for warning in caught:
+        ...     print(warning.message)
+        The edge_source polygons ... a clockwise polygon lies outside the counter-clockwise...
+        The edge_source polygons ... 2 polygons are counter-clockwise...
+        >>> pv.plot_compare(
+        ...     {
+        ...         'clockwise holes': tess,
+        ...         'one hole reversed': tess_one,
+        ...         'both holes reversed': tess_both,
+        ...     },
+        ...     show_edges=True,
+        ...     cpos='xy',
+        ... )
+
+        A counter-clockwise polygon trims the triangulation to a concave outline.
+
+        >>> import numpy as np
+        >>> angles = np.linspace(0, 2 * np.pi, 10, endpoint=False)
+        >>> radii = np.tile([8, 4], 5)
+        >>> x, y = radii * np.cos(angles), radii * np.sin(angles)
+        >>> star = np.column_stack([x, y, np.zeros(10)])
+        >>> hole0 = pv.Polygon(center=(1.5, 1, 0), n_sides=30, radius=1)
+        >>> hole1 = pv.Polygon(center=(-1.5, -1, 0), n_sides=30, radius=1)
+        >>> lines = pv.PolyData(star, lines=[11, *range(10), 0])
+        >>> polygon = pv.PolyData(star, faces=[10, *range(10)])
+        >>> with_lines = hole0.append_polydata(hole1, lines)
+        >>> with_polygon = hole0.append_polydata(hole1, polygon)
+        >>> pv.plot_compare(
+        ...     {
+        ...         'outline as lines': with_lines.delaunay_2d(edge_source=with_lines),
+        ...         'outline as polygon': with_polygon.delaunay_2d(
+        ...             edge_source=with_polygon
+        ...         ),
+        ...     },
+        ...     show_edges=True,
+        ...     cpos='xy',
+        ... )
+
+        """
+        mesh = _delaunay_2d(
+            self,
+            tol=tol,
+            alpha=alpha,
+            offset=offset,
+            bound=bound,
+            edge_source=edge_source,
+            progress_bar=progress_bar,
+        )
         if inplace:
-            self.copy_from(mesh, deep=False)
+            _copy_onto(self, mesh)
             return self
         return mesh
 

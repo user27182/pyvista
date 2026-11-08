@@ -1718,6 +1718,309 @@ def test_delaunay_2d():
     assert np.allclose(pdata.points, surf.points)
 
 
+def _winding_edge_source(case: str) -> pv.PolyData:
+    """Return a ``delaunay_2d`` edge source for a winding case."""
+    angles = np.linspace(0, 2 * np.pi, 10, endpoint=False)
+    radii = np.tile([8, 4], 5)
+    star = np.column_stack([radii * np.cos(angles), radii * np.sin(angles), np.zeros(10)])
+    boundary = pv.PolyData(star, faces=[10, *range(10)])
+    outline = pv.PolyData(star, lines=[11, *range(10), 0])
+    hole0 = pv.Polygon(center=(1.5, 1, 0), n_sides=30, radius=1)
+    hole1 = pv.Polygon(center=(-1.5, -1, 0), n_sides=30, radius=1)
+    far = pv.Polygon(center=(20, 0, 0), n_sides=30, radius=1)
+    sources = {
+        'boundary_and_holes': hole0.append_polydata(hole1, boundary),
+        'boundary_and_holes_tilted': hole0.append_polydata(hole1, boundary)
+        .rotate_x(70, inplace=False)
+        .rotate_y(30, inplace=False),
+        'holes_in_lines': hole0.append_polydata(hole1, outline),
+        'boundary_only': boundary,
+        'hole_reversed': hole0.flip_faces().append_polydata(hole1, outline),
+        'holes_reversed': hole0.flip_faces().append_polydata(hole1.flip_faces(), outline),
+        'hole_outside_boundary': hole0.append_polydata(far, boundary),
+        'boundary_reversed': hole0.append_polydata(hole1, boundary.flip_faces()),
+        'boundary_and_holes_xz': hole0.append_polydata(hole1, boundary).rotate_x(
+            90, inplace=False
+        ),
+        'hole_only': hole0,
+        'all_reversed': hole0.flip_faces().append_polydata(
+            hole1.flip_faces(), boundary.flip_faces()
+        ),
+        'boundary_and_holes_flipped': hole0.append_polydata(hole1, boundary).rotate_x(
+            180, inplace=False
+        ),
+        'hole_touching_boundary': pv.PolyData(
+            [[-8.0, -8, 0], [8, -8, 0], [8, 8, 0], [-8, 8, 0], [-4, -2, 0], [-2, -4, 0]],
+            faces=[4, 0, 1, 2, 3, 3, 0, 4, 5],
+        ),
+    }
+    return sources[case]
+
+
+@pytest.mark.parametrize(
+    'case',
+    [
+        'boundary_and_holes',
+        'boundary_and_holes_tilted',
+        'holes_in_lines',
+        'boundary_only',
+        'hole_touching_boundary',
+    ],
+)
+def test_delaunay_2d_edge_source_winding_valid(case):
+    source = _winding_edge_source(case)
+    surf = source.delaunay_2d(edge_source=source)
+    assert surf.n_cells
+
+
+def test_delaunay_2d_raises_non_finite_points():
+    mesh = pv.Polygon(n_sides=6)
+    mesh.points[0] = np.nan
+    with pytest.raises(ValueError, match='Points must be finite'):
+        mesh.delaunay_2d()
+
+
+def test_delaunay_2d_raises_edge_source_type():
+    mesh = pv.Polygon(n_sides=6)
+    with pytest.raises(TypeError, match='edge_source must be an instance of'):
+        mesh.delaunay_2d(edge_source=mesh.cast_to_unstructured_grid())
+
+
+def test_delaunay_2d_raises_edge_source_ids_beyond_input():
+    source = _winding_edge_source('boundary_and_holes')
+    with pytest.raises(ValueError, match=r'references point id \d+, but the input has 5 points'):
+        pv.PolyData(source.points[:5]).delaunay_2d(edge_source=source)
+
+
+def test_delaunay_2d_raises_edge_source_negative_id():
+    mesh = pv.Polygon(n_sides=6)
+    source = pv.PolyData(mesh.points, lines=[2, 0, 1])
+    source.GetLines().GetConnectivityArray().SetValue(1, -1)
+    with pytest.raises(ValueError, match='references point id -1, but the input has 6 points'):
+        mesh.delaunay_2d(edge_source=source)
+
+
+def test_delaunay_2d_edge_source_strips_warn():
+    strips = pv.Plane(i_resolution=3, j_resolution=1).triangulate().strip()
+    with pytest.warns(UserWarning, match='triangle strips are ignored'):
+        strips.delaunay_2d(edge_source=strips)
+
+
+def test_delaunay_2d_edge_source_vertices_ignored_silently():
+    source = _winding_edge_source('boundary_and_holes')
+    with_vertices = pv.PolyData(source.points)
+    with_vertices.faces = source.faces
+    assert with_vertices.n_verts
+    assert with_vertices.delaunay_2d(edge_source=with_vertices).n_cells
+
+
+def test_delaunay_2d_edge_source_repeated_id_warns():
+    source = _winding_edge_source('boundary_only')
+    repeated = pv.PolyData(source.points, faces=[11, *range(10), 0])
+    with pytest.warns(UserWarning, match='repeats a point id in consecutive positions'):
+        repeated.delaunay_2d(edge_source=repeated)
+
+
+@pytest.mark.parametrize(
+    'points',
+    [
+        [[0.0, 0, 0]],
+        [[0.0, 0, 0], [1, 0, 0]],
+        [[0.0, 0, 0], [1, 0, 0], [2, 0, 0], [3, 0, 0]],
+        np.zeros((4, 3)),
+        (np.outer(np.linspace(0, 1, 50), [3, 2, 1]) + 1000).astype(np.float32),
+    ],
+    ids=['one', 'two', 'collinear', 'coincident', 'collinear_float32_offset'],
+)
+def test_delaunay_2d_degenerate_points_warn(points):
+    mesh = pv.PolyData(points)
+    mesh.point_data['data'] = np.arange(mesh.n_points)
+    with pytest.warns(UserWarning, match='coincident or collinear'):
+        result = mesh.delaunay_2d()
+    assert result.n_cells == 0
+    assert np.array_equal(result.points, mesh.points)
+    assert np.array_equal(result.point_data['data'], mesh.point_data['data'])
+
+
+def test_delaunay_2d_degenerate_points_bound():
+    line = pv.PolyData([[0.0, 0, 0], [1, 0.5, 0], [2, 1, 0], [3, 1.5, 0]])
+    bounded = line.delaunay_2d(bound=True)
+    assert bounded.n_points == line.n_points + 8
+    assert bounded.n_cells
+    assert bounded.regular_faces.max() < bounded.n_points
+
+
+def test_delaunay_2d_alpha_lines_no_warning():
+    x, y = np.meshgrid(np.arange(20.0), np.arange(20.0))
+    points = np.vstack([np.column_stack([x.ravel(), y.ravel(), np.zeros(400)]), [[40, 5, 0]]])
+    source = pv.PolyData(points, lines=[2, 0, 400])
+    surf = pv.PolyData(points).delaunay_2d(edge_source=source, alpha=2)
+    assert surf.n_cells
+
+
+def test_delaunay_2d_empty():
+    assert pv.PolyData().delaunay_2d().n_points == 0
+    assert pv.PolyData().delaunay_2d(bound=True).n_points == 0
+
+
+@pytest.mark.parametrize(
+    ('case', 'tol'),
+    [
+        ('crossing_lines', 1e-5),
+        ('crossing_lines_only', 1e-5),
+        ('figure_eight', 1e-5),
+        ('merged_by_tol', 0.3),
+    ],
+)
+def test_delaunay_2d_edge_source_unrecovered_edges_warn(case, tol):
+    sources = {
+        'crossing_lines_only': pv.PolyData(
+            [
+                [0.0, 0, 0],
+                [4, 0, 0],
+                [4, 4, 0],
+                [0, 4, 0],
+                [2, -1, 0],
+                [2, 5, 0],
+                [-1, 2, 0],
+                [5, 2, 0],
+            ],
+            lines=[2, 4, 5, 2, 6, 7],
+        ),
+        'crossing_lines': pv.PolyData(
+            [
+                [0.0, 0, 0],
+                [4, 0, 0],
+                [4, 4, 0],
+                [0, 4, 0],
+                [2, -1, 0],
+                [2, 5, 0],
+                [-1, 2, 0],
+                [5, 2, 0],
+            ],
+            faces=[4, 0, 1, 2, 3],
+            lines=[2, 4, 5, 2, 6, 7],
+        ),
+        'figure_eight': pv.PolyData(
+            [[0.0, 0, 0], [2, 2, 0], [2, 0, 0], [0, 2, 0]], faces=[4, 0, 1, 2, 3]
+        ),
+        'merged_by_tol': _winding_edge_source('boundary_only'),
+    }
+    source = sources[case]
+    with pytest.warns(UserWarning, match='are not edges of the triangulation'):
+        source.delaunay_2d(edge_source=source, tol=tol)
+
+
+def test_delaunay_2d_edge_source_unrecovered_edges_no_vtk_output(capfd):
+    figure_eight = pv.PolyData(
+        [[0.0, 0, 0], [2, 2, 0], [2, 0, 0], [0, 2, 0]], faces=[4, 0, 1, 2, 3]
+    )
+    with pytest.warns(UserWarning, match='no polygon insides or holes are removed'):
+        figure_eight.delaunay_2d(edge_source=figure_eight)
+    assert 'Edge not recovered' not in capfd.readouterr().err
+
+
+@pytest.mark.parametrize('tilted', [False, True])
+def test_delaunay_2d_bound(tilted):
+    circle = pv.Polygon(n_sides=12, radius=2)
+    mesh = pv.PolyData(circle.points.astype(np.float32))
+    if tilted:
+        mesh.rotate_x(40, inplace=True).rotate_y(25, inplace=True)
+    mesh.point_data['float'] = np.arange(12, dtype=float)
+    mesh.point_data['int'] = np.arange(12)
+    mesh.point_data['vectors'] = np.ones((12, 3))
+    mesh.point_data.active_vectors_name = 'vectors'
+    mesh.point_data.active_scalars_name = 'int'
+    mesh.user_dict['key'] = 'value'
+
+    plain = mesh.delaunay_2d()
+    bounded = mesh.delaunay_2d(bound=True)
+    wider = mesh.delaunay_2d(bound=True, offset=3)
+
+    assert bounded.n_points == mesh.n_points + 8
+    assert bounded.regular_faces.max() < bounded.n_points
+    assert bounded.n_cells > plain.n_cells
+    assert bounded.points.dtype == np.float32
+    assert np.array_equal(bounded.points[: mesh.n_points], mesh.points)
+    normal = np.cross(mesh.points[1] - mesh.points[0], mesh.points[2] - mesh.points[0])
+    normal /= np.linalg.norm(normal)
+    assert np.allclose((bounded.points - mesh.points[0]) @ normal, 0, atol=1e-4)
+    assert wider.length > bounded.length > mesh.length
+    assert np.isnan(bounded.point_data['float'][-8:]).all()
+    assert np.array_equal(bounded.point_data['int'][-8:], np.zeros(8))
+    assert bounded.active_scalars_name == 'int'
+    assert bounded.point_data.active_vectors_name == 'vectors'
+    assert bounded.user_dict['key'] == 'value'
+
+
+def test_delaunay_2d_bound_with_edge_source():
+    source = _winding_edge_source('hole_only')
+    bounded = source.delaunay_2d(edge_source=source, bound=True)
+    assert bounded.n_points == source.n_points + 8
+    assert bounded.regular_faces.max() < bounded.n_points
+    centers = bounded.cell_centers().points
+    assert not np.any(np.linalg.norm(centers[:, :2] - [1.5, 1], axis=1) < 0.9)
+    assert bounded.area > source.area
+
+
+@pytest.mark.parametrize('bound', [False, True])
+def test_delaunay_2d_alpha_keeps_edges(bound):
+    mesh = pv.PolyData(pv.Polygon(n_sides=12, radius=2).points)
+    surf = mesh.delaunay_2d(bound=bound, alpha=1.5)
+    assert surf.n_faces == 0
+    assert surf.n_lines == 18
+    assert surf.n_points == mesh.n_points + 8 * bound
+    assert surf.lines.reshape(-1, 3)[:, 1:].max() < surf.n_points
+
+
+@pytest.mark.parametrize('cast', [False, True])
+def test_delaunay_2d_bound_inplace(cast):
+    mesh = pv.PolyData(pv.Polygon(n_sides=12, radius=2).points)
+    mesh.point_data['data'] = np.arange(12.0)
+    if cast:
+        mesh = mesh.cast_to_unstructured_grid()
+    result = mesh.delaunay_2d(bound=True, inplace=True)
+    assert result is mesh
+    assert mesh.n_points == 20
+    assert np.isnan(mesh.point_data['data'][12:]).all()
+
+
+def test_delaunay_2d_unstructured_grid_inplace():
+    grid = pv.Polygon(n_sides=12).cast_to_unstructured_grid()
+    result = grid.delaunay_2d(inplace=True)
+    assert result is grid
+    assert isinstance(grid, pv.UnstructuredGrid)
+    assert grid.n_cells == 10
+    assert (grid.celltypes == pv.CellType.TRIANGLE).all()
+
+
+@pytest.mark.parametrize('case', ['boundary_and_holes', 'hole_only'])
+def test_delaunay_2d_edge_source_winding_alpha_empty(case):
+    source = _winding_edge_source(case)
+    surf = source.delaunay_2d(edge_source=source, alpha=1e-6)
+    assert surf.n_faces == 0
+    assert surf.n_verts == source.n_points
+
+
+@pytest.mark.parametrize(
+    ('case', 'match'),
+    [
+        ('hole_reversed', 'a clockwise polygon lies outside the counter-clockwise polygon'),
+        ('holes_reversed', '2 polygons are counter-clockwise'),
+        ('hole_outside_boundary', 'a clockwise polygon lies outside the counter-clockwise'),
+        ('boundary_reversed', 'a clockwise polygon lies inside another clockwise polygon'),
+        ('boundary_and_holes_xz', 'every polygon is wound opposite to the projection plane'),
+        ('boundary_and_holes_flipped', 'every polygon is wound opposite to the projection plane'),
+        ('all_reversed', 'every polygon is wound opposite to the projection plane'),
+        ('hole_only', 'the whole triangulation is a hole'),
+    ],
+)
+def test_delaunay_2d_edge_source_winding_warns(case, match):
+    source = _winding_edge_source(case)
+    with pytest.warns(UserWarning, match=match):
+        source.delaunay_2d(edge_source=source)
+
+
 def test_lines():
     theta = np.linspace(-4 * np.pi, 4 * np.pi, 100)
     z = np.linspace(-2, 2, 100)
