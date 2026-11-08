@@ -34,7 +34,13 @@ def _delaunay_2d(
     edge_source: PolyData | None,
     progress_bar: bool,
 ) -> PolyData:
-    """Triangulate ``mesh`` with ``vtkDelaunay2D``, and raise or warn where it cannot."""
+    """Triangulate ``mesh`` with ``vtkDelaunay2D``, and raise or warn where it cannot.
+
+    VTK projects the points onto their best-fitting plane and triangulates there. Every
+    check that needs that plane uses VTK's own matrix, since the sign of its normal
+    decides which polygons are clockwise. With ``bound`` the projection is done here and
+    undone afterwards, because VTK drops the bounding triangulation in best-fit mode.
+    """
     _validate_input(mesh, edge_source)
     if not bound and _points_are_degenerate(mesh):
         output = pv.PolyData()
@@ -60,6 +66,7 @@ def _delaunay_2d(
         alg.SetSourceData(edge_source)
     events: list[VtkEvent] = []
     if has_polygons:
+        # VTK only logs an unrecovered polygon edge, so catch it to warn and to skip the fill check
         with pv.vtk_verbosity('off'), pv.VtkErrorCatcher(send_to_logging=False) as catcher:
             _update_alg(alg, progress_bar=progress_bar, message='Computing 2D Triangulation')
         events = catcher.events
@@ -73,6 +80,7 @@ def _delaunay_2d(
     if use_bound and matrix is not None:
         inverse = np.linalg.inv(matrix)
         points = output.points @ inverse[:3, :3].T + inverse[:3, 3]
+        # The eight bounding points come last, so the input points are restored exactly
         points[: mesh.n_points] = mesh.points
         output.points = points.astype(mesh.points.dtype)
         _copy_point_and_field_data(mesh, output)
@@ -92,7 +100,11 @@ def _best_fitting_plane(mesh: DataSet) -> NDArray[np.float64]:
 
 
 def _cell_edges(cells: _vtk.vtkCellArray, *, closed: bool) -> NDArray[np.int64]:
-    """Return the ``(n, 2)`` point id pairs along each cell, closing each cell if asked."""
+    """Return the ``(n, 2)`` point id pairs along each cell, closing each cell if asked.
+
+    Consecutive ids in the connectivity array are an edge unless the second one starts a
+    new cell, which keeps this vectorized over all cells at once.
+    """
     connectivity = _vtk.vtk_to_numpy(cells.GetConnectivityArray()).astype(np.int64)
     offsets = _vtk.vtk_to_numpy(cells.GetOffsetsArray()).astype(np.int64)
     starts, ends = offsets[:-1], offsets[1:]
@@ -141,7 +153,11 @@ def _validate_input(mesh: DataSet, edge_source: PolyData | None) -> None:
 
 
 def _points_are_degenerate(mesh: DataSet) -> bool:
-    """Return whether the points are coincident or collinear, warning if so."""
+    """Return whether the points are coincident or collinear, warning if so.
+
+    The second singular value of the centered points is their spread off the best line,
+    compared against a relative floor and the rounding noise of the stored coordinates.
+    """
     if mesh.n_points == 0:
         return False
     points = mesh.points.astype(np.float64)
@@ -180,7 +196,14 @@ def _check_edge_source(
     alpha: float,
     filled: bool,
 ) -> None:
-    """Warn for ``edge_source`` edges the output lacks and polygons it did not fill as wound."""
+    """Warn for ``edge_source`` edges the output lacks and polygons it did not fill as wound.
+
+    ``filled`` says VTK ran its polygon fill, which it skips entirely when any polygon
+    edge is unrecovered. After a fill, a missing polygon edge means both of its triangles
+    were removed, which the fill check reports, and a missing line may just lie inside a
+    removed region, which the locator rules out.
+    """
+    # Links on a shallow copy keep the point-to-cell cache off the returned mesh
     linked = output.copy(deep=False)
     linked.BuildLinks()
     lines = _cell_edges(edge_source.GetLines(), closed=False)
@@ -209,6 +232,7 @@ def _missing_edges(
 ) -> NDArray[np.int64]:
     """Return the non-degenerate edges that ``linked`` lacks and that ``alpha`` would keep."""
     edges = edges[edges[:, 0] != edges[:, 1]]
+    # One IsEdge lookup per constraint costs O(constraints), not O(output edges)
     edges = edges[[not linked.IsEdge(p, q) for p, q in edges.tolist()]]
     if alpha > 0 and len(edges):
         lengths = np.linalg.norm(np.diff(linked.points[edges], axis=1)[:, 0], axis=1)
@@ -224,6 +248,7 @@ def _outside_removed_regions(
         return edges
     if not output.n_faces:
         return edges[:0]
+    # The locator over the flattened output is only built once some edge is missing
     flat = output.points @ matrix[:2, :3].T
     covered = pv.PolyData.from_regular_faces(
         np.column_stack([flat, np.zeros(len(flat))]), output.regular_faces
@@ -239,18 +264,29 @@ def _check_fill(
     flat: NDArray[np.float64],
     polys: NDArray[np.int64],
 ) -> None:
-    """Warn when triangles are missing on the side a polygon keeps, or remain on the other."""
+    """Warn when triangles are missing on the side a polygon keeps, or remain on the other.
+
+    ``vtkDelaunay2D::FillPolygons`` walks each polygon in order, keeps the triangle left
+    of every edge and flood-removes the one right of it. The flood stops at triangles
+    an earlier polygon kept, and a later polygon keeps its left triangles even inside a
+    removed region, so a wrongly wound polygon leaves either an empty kept side or a
+    one-triangle ring whose inner neighbors are gone. Both are read from the output
+    with a few edge-neighbor lookups per polygon, so the cost is linear in the polygons.
+    """
     faces = linked.regular_faces if linked.n_faces else np.empty((0, 3), dtype=np.int64)
+    # Sorted (p, q) pairs hashed to one int, for O(1) "is this edge a polygon edge"
     stride = linked.n_points + 1
     poly_keys = set((np.sort(polys, axis=1) @ [stride, 1]).tolist())
     neighbors = _vtk.vtkIdList()
     problems: set[str] = set()
     for ids in edge_source.irregular_faces:
         ring = flat[ids]
+        # Shoelace signed area: positive is counter-clockwise in the projection plane
         area = np.sum(ring[:, 0] * np.roll(ring[:, 1], -1) - np.roll(ring[:, 0], -1) * ring[:, 1])
         kept, removed = ('inside', 'outside') if area > 0 else ('outside', 'inside')
         wound = 'counter-clockwise' if area > 0 else 'clockwise'
         n = len(ids)
+        # A wrong fill affects every edge of a polygon, so four samples bound the cost
         for i in range(0, n, max(1, n // 4)):
             p, q = int(ids[i]), int(ids[(i + 1) % n])
             linked.GetCellEdgeNeighbors(-1, p, q, neighbors)
@@ -269,6 +305,7 @@ def _check_fill(
                 problems.add(f'triangles are missing {kept} a {wound} polygon')
                 continue
             cell, r = left
+            # The kept triangle's other edges need neighbors too, unless another polygon owns them
             for a, b in ((q, r), (r, p)):
                 if min(a, b) * stride + max(a, b) in poly_keys:
                     continue
