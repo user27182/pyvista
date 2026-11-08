@@ -81,12 +81,6 @@ def _delaunay_2d(
     return output
 
 
-def _copy_onto(mesh: DataSet, output: PolyData) -> None:
-    """Copy a triangulation onto its input, casting it for an unstructured grid input."""
-    target = output if isinstance(mesh, pv.PolyData) else output.cast_to_unstructured_grid()
-    mesh.copy_from(target, deep=False)
-
-
 def _best_fitting_plane(mesh: DataSet) -> NDArray[np.float64]:
     """Return the 4x4 matrix ``vtkDelaunay2D`` uses to move points onto the xy plane."""
     transform = _vtk.vtkDelaunay2D.ComputeBestFittingPlane(mesh)

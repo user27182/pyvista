@@ -24,7 +24,6 @@ from pyvista.core.filters import _get_output
 from pyvista.core.filters import _update_alg
 from pyvista.core.filters.data_object import _copy_active_attributes
 from pyvista.core.filters.data_set import DataSetFilters
-from pyvista.core.utilities._delaunay_2d import _copy_onto
 from pyvista.core.utilities._delaunay_2d import _delaunay_2d
 from pyvista.core.utilities._strip import _StripTrace
 from pyvista.core.utilities.arrays import CellLiteral
@@ -4011,7 +4010,7 @@ class PolyDataFilters(DataSetFilters):
             progress_bar=progress_bar,
         )
         if inplace:
-            _copy_onto(self, mesh)
+            self.copy_from(mesh, deep=False)
             return self
         return mesh
 
