@@ -128,7 +128,6 @@ repos:
         language: python
         entry: python -m hooks.lazy_modules
         files: ^pyvista/
-        exclude: __init__\.py$
         types: [python]
       - id: no-lint-suppression-comments
         name: "No lint suppression comments (fix it, or use pyproject.toml per-file-ignores)"

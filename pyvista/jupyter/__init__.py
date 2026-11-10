@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'importlib.metadata',
+    'importlib.util',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'pyvista.core.utilities._registry_helpers',
+    'typing',
+    'typing_extensions',
+]
+
 # ``Callable`` is used in the ``JupyterBackendRegistration``
 # NamedTuple field annotations and must be available at runtime so that
 # ``typing.get_type_hints`` (called by Sphinx autodoc) can resolve them.

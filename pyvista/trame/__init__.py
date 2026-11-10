@@ -7,6 +7,13 @@ will be removed in a future release.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'trame_pyvista',
+    'trame_pyvista.ui',
+]
+
 from trame_pyvista import PyVistaLocalView
 from trame_pyvista import PyVistaRemoteLocalView
 from trame_pyvista import PyVistaRemoteView

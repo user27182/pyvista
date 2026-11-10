@@ -14,7 +14,6 @@ __lazy_modules__ = [
     'importlib',
     'importlib.util',
     'os',
-    'pyvista.core.errors',
     'typing',
 ]
 
@@ -23,8 +22,6 @@ import importlib
 import importlib.util
 import os
 from typing import TYPE_CHECKING
-
-from pyvista.core.errors import VTKVersionError
 
 
 def _resolve_vtk_root() -> str:
@@ -990,6 +987,8 @@ def _import_vtkPythonItem() -> type[Any]:  # noqa: N802
             def __init__(self) -> None:  # pragma: no cover
                 """Raise version error on init."""
                 msg = 'Chart backgrounds require the vtkPythonContext2D module'
+                from pyvista.core.errors import VTKVersionError  # noqa: PLC0415
+
                 raise VTKVersionError(msg)
 
     return vtkPythonItem

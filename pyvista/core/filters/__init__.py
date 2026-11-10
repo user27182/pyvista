@@ -25,6 +25,25 @@ Examples
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'contextlib',
+    'numpy',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'pyvista.core.filters.composite',
+    'pyvista.core.filters.data_object',
+    'pyvista.core.filters.data_set',
+    'pyvista.core.filters.image_data',
+    'pyvista.core.filters.poly_data',
+    'pyvista.core.filters.rectilinear_grid',
+    'pyvista.core.filters.structured_grid',
+    'pyvista.core.filters.unstructured_grid',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.observers',
+    'typing',
+]
+
 import contextlib
 from typing import TYPE_CHECKING
 from typing import Any

@@ -5,8 +5,8 @@ from __future__ import annotations
 __lazy_modules__ = [
     'enum',
     'pyvista',
+    'pyvista._vtk_version',
     'pyvista._warn_external',
-    'pyvista.core._vtk_utilities',
     'pyvista.core.errors',
     'textwrap',
     'types',
@@ -25,8 +25,8 @@ from typing import cast
 from typing import get_args
 
 from pyvista import _vtk
+from pyvista._vtk_version import vtk_version_info
 from pyvista._warn_external import warn_external
-from pyvista.core._vtk_utilities import vtk_version_info
 from pyvista.core.errors import PyVistaDeprecationWarning
 
 if TYPE_CHECKING:

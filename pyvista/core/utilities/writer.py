@@ -8,7 +8,7 @@ __lazy_modules__ = [
     'numpy',
     'pathlib',
     'pyvista',
-    'pyvista.core._vtk_utilities',
+    'pyvista._vtk_version',
     'pyvista.core.filters.composite',
     'pyvista.core.utilities',
     'pyvista.core.utilities.fileio',
@@ -29,7 +29,7 @@ import numpy as np
 import pyvista_validation as _validation
 
 import pyvista as pv
-from pyvista.core._vtk_utilities import vtk_version_info
+from pyvista._vtk_version import vtk_version_info
 from pyvista.core.filters.composite import _format_nested_index
 from pyvista.core.utilities import _file_formats as _formats
 from pyvista.core.utilities.fileio import _CompressionOptions

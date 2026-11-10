@@ -7,9 +7,13 @@
 # ruff: noqa: I001
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista._cli.app',
+]
+
 from .app import CLI_APP as CLI_APP
-from . import plot as plot
-from . import compare as compare
-from . import convert as convert
-from . import validate as validate
-from . import report as report
+from . import plot as plot  # eager: registers the subcommand
+from . import compare as compare  # eager: registers the subcommand
+from . import convert as convert  # eager: registers the subcommand
+from . import validate as validate  # eager: registers the subcommand
+from . import report as report  # eager: registers the subcommand
