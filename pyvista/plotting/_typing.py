@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'matplotlib',
+    'numpy',
+    'numpy.typing',
+    'pathlib',
+    'pyvista',
+    'pyvista.core._typing_core',
+    'pyvista.plotting.renderer',
+    'typing',
+]
+
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING

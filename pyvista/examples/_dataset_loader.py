@@ -30,6 +30,21 @@ downloading, reading, and processing files with a generic mapping:
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'abc',
+    'collections.abc',
+    'functools',
+    'itertools',
+    'os',
+    'pathlib',
+    'posixpath',
+    'pyvista',
+    'pyvista.core.utilities._optional_formats',
+    'pyvista.core.utilities.fileio',
+    'typing',
+    'xml.etree',
+]
+
 from abc import abstractmethod
 from collections.abc import Sequence
 import functools

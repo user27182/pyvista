@@ -2,6 +2,19 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'contextlib',
+    'copy',
+    'numpy',
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.formatting_html',
+    'pyvista.core.pyvista_ndarray',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.misc',
+    'typing',
+]
+
 import contextlib
 import copy as copylib
 from typing import TYPE_CHECKING

@@ -178,6 +178,24 @@ that indexed is incompatible with parallel builds due to race conditions.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'doctest',
+    'docutils.parsers.rst',
+    'docutils.parsers.rst.directives.images',
+    'hashlib',
+    'jinja2',
+    'os',
+    'pathlib',
+    'pyvista',
+    'pyvista.ext._plot_subprocess',
+    're',
+    'shutil',
+    'sphinx.util',
+    'textwrap',
+    'traceback',
+    'typing',
+]
+
 import doctest
 import hashlib
 import os

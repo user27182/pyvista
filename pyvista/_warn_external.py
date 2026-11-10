@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'inspect',
+    'itertools',
+    'pathlib',
+    're',
+    'sys',
+    'warnings',
+]
+
 import inspect
 import itertools
 from pathlib import Path

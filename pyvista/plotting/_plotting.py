@@ -2,6 +2,22 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'itertools',
+    'numpy',
+    'operator',
+    'pyvista._warn_external',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting._property',
+    'pyvista.plotting.colors',
+    'pyvista.plotting.opts',
+    'pyvista.plotting.tools',
+    'pyvista.plotting.utilities.algorithms',
+    'typing',
+]
+
 from collections.abc import Sequence
 import itertools
 import operator

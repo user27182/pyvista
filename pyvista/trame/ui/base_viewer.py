@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'trame_pyvista.ui.base_viewer',
+]
+
 from trame_pyvista.ui.base_viewer import BaseViewer
 
 from pyvista._warn_external import warn_external

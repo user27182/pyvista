@@ -2,6 +2,28 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'abc',
+    'dataclasses',
+    'enum',
+    'json',
+    'numpy',
+    'pathlib',
+    'pyvista',
+    'pyvista._version',
+    'pyvista._warn_external',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.errors',
+    'pyvista.core.filters',
+    'pyvista.core.utilities',
+    'pyvista.core.utilities.fileio',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.misc',
+    'typing',
+    'weakref',
+    'xml.etree',
+]
+
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass

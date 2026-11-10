@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'docutils',
+    'docutils.parsers.rst',
+    'pathlib',
+    'shutil',
+    'sphinx.util',
+    'sphinx.util.osutil',
+    'trame_vtk.tools.vtksz2html',
+    'typing',
+]
+
 from pathlib import Path
 import shutil
 from typing import TYPE_CHECKING

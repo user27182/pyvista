@@ -2,6 +2,22 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'numpy',
+    'pathlib',
+    'pyvista',
+    'pyvista.core._structured_data',
+    'pyvista.core.dataset',
+    'pyvista.core.filters',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.fileio',
+    'pyvista.core.utilities.misc',
+    'pyvista.core.utilities.writer',
+    'pyvista_validation',
+    'typing',
+]
+
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING

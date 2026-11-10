@@ -2,6 +2,23 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'functools',
+    'inspect',
+    'itertools',
+    'matplotlib.backends.backend_agg',
+    'matplotlib.pyplot',
+    'numpy',
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.colors',
+    're',
+    'typing',
+    'weakref',
+]
+
 from collections.abc import Sequence
 import functools
 import inspect

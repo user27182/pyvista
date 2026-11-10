@@ -6,6 +6,29 @@ to VTK algorithms and PyVista filtering/plotting routines.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'itertools',
+    'numpy',
+    'pathlib',
+    'pyvista',
+    'pyvista.core._typing_core',
+    'pyvista.core.dataobject',
+    'pyvista.core.dataset',
+    'pyvista.core.filters.composite',
+    'pyvista.core.formatting_html',
+    'pyvista.core.pyvista_ndarray',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.fileio',
+    'pyvista.core.utilities.geometric_objects',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.misc',
+    'pyvista.core.utilities.writer',
+    'pyvista_validation',
+    'typing',
+    'typing_extensions',
+]
+
 from collections.abc import Iterator
 from collections.abc import MutableSequence
 from collections.abc import Sequence

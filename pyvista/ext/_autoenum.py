@@ -6,6 +6,17 @@ https://www.sphinx-doc.org/en/master/development/tutorials/autodoc_ext.html
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'enum',
+    'importlib',
+    'inspect',
+    'sphinx',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.util',
+    'typing',
+]
+
 from enum import Enum
 from enum import EnumMeta
 from enum import Flag

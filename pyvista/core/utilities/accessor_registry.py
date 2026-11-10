@@ -28,6 +28,16 @@ pyvista.registered_accessors
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'contextlib',
+    'importlib',
+    'importlib.metadata',
+    'pyvista',
+    'pyvista._warn_external',
+    'typing',
+    'weakref',
+]
+
 import contextlib
 
 # ICN003 waived: tests patch this module-level name to intercept plugin

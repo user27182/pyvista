@@ -24,6 +24,14 @@ A user-defined Foo class is defined that extends the functionality of
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista.core.composite',
+    'pyvista.core.grid',
+    'pyvista.core.objects',
+    'pyvista.core.partitioned',
+    'pyvista.core.pointset',
+]
+
 from .composite import MultiBlock
 from .grid import ImageData
 from .grid import RectilinearGrid

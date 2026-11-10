@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'trame_pyvista.jupyter',
+]
+
 from trame_pyvista.jupyter import EmbeddableWidget
 from trame_pyvista.jupyter import TrameJupyterServerDownError
 from trame_pyvista.jupyter import TrameServerDownError

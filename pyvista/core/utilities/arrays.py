@@ -2,6 +2,22 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections',
+    'collections.abc',
+    'copy',
+    'enum',
+    'itertools',
+    'json',
+    'numpy',
+    'pyvista',
+    'pyvista._version',
+    'pyvista._warn_external',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.errors',
+    'typing',
+]
+
 from collections import UserDict
 from collections import deque
 from collections.abc import Sequence

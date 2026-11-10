@@ -2,6 +2,34 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'copy',
+    'dataclasses',
+    'enum',
+    'functools',
+    'itertools',
+    'math',
+    'numpy',
+    'pyvista',
+    'pyvista._version',
+    'pyvista._warn_external',
+    'pyvista.core._typing_core',
+    'pyvista.core.celltype',
+    'pyvista.core.errors',
+    'pyvista.core.filters',
+    'pyvista.core.utilities._cell_lengths',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.misc',
+    'pyvista.core.utilities.reader',
+    'pyvista.core.utilities.transform',
+    'pyvista_validation',
+    're',
+    'reprlib',
+    'typing',
+    'warnings',
+]
+
 from collections.abc import Callable
 from collections.abc import Sequence
 from collections.abc import Sized

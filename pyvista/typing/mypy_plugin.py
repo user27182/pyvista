@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'importlib.util',
+    'mypy.nodes',
+    'mypy.plugin',
+    'typing',
+]
+
 __all__: list[str] = ['promote_type']
 
 import importlib.util

@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'trame_pyvista.widgets',
+]
+
 from trame_pyvista.widgets import CLOSED_PLOTTER_ERROR
 from trame_pyvista.widgets import PyVistaLocalView
 from trame_pyvista.widgets import PyVistaRemoteLocalView

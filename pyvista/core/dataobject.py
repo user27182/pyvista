@@ -2,6 +2,28 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'abc',
+    'collections',
+    'numpy',
+    'pathlib',
+    'pyvista',
+    'pyvista.core._structured_data',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.datasetattributes',
+    'pyvista.core.formatting_html',
+    'pyvista.core.utilities.accessor_registry',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.fileio',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.misc',
+    'pyvista.core.utilities.state_manager',
+    'pyvista.core.utilities.writer_registry',
+    'pyvista.typing.mypy_plugin',
+    'sys',
+    'typing',
+]
+
 from abc import abstractmethod
 from collections import UserDict
 from collections import defaultdict

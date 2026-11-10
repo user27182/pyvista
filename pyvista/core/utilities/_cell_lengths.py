@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'numpy',
+    'pyvista',
+    'pyvista_validation',
+    'typing',
+]
+
 from typing import TYPE_CHECKING
 
 import numpy as np

@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.formatting_html',
+    'pyvista.core.utilities.misc',
+    'typing',
+    'weakref',
+]
+
 from typing import TYPE_CHECKING
 import weakref
 

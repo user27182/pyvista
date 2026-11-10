@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'dataclasses',
+    'difflib',
+    'functools',
+    'pathlib',
+    'pyvista',
+    'pyvista.examples._dataset_loader',
+    'sys',
+    'typing',
+    'typing_extensions',
+]
+
 from dataclasses import dataclass
 import difflib
 import functools

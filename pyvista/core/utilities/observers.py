@@ -2,6 +2,22 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'importlib.util',
+    'logging',
+    'pathlib',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'pyvista.core.utilities.misc',
+    're',
+    'signal',
+    'sys',
+    'threading',
+    'traceback',
+    'typing',
+]
+
 import importlib.util
 import logging
 from pathlib import Path

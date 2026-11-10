@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'functools',
+    'pyvista',
+    'pyvista._cli.app',
+    'pyvista._cli.utils',
+    'typing',
+]
+
 import functools
 from typing import get_type_hints
 

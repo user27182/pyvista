@@ -2,6 +2,16 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'functools',
+    'os',
+    'pathlib',
+    'pyvista',
+    'pyvista.plotting.tools',
+    're',
+    'sys',
+]
+
 import functools
 import os
 from pathlib import Path

@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.examples',
+    'pyvista.examples.downloads',
+]
+
 import pyvista as pv
 from pyvista._warn_external import warn_external
 from pyvista.examples import downloads

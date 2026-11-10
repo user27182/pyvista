@@ -2,6 +2,31 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections',
+    'collections.abc',
+    'functools',
+    'numpy',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core._structured_data',
+    'pyvista.core._typing_core',
+    'pyvista.core.dataobject',
+    'pyvista.core.datasetattributes',
+    'pyvista.core.errors',
+    'pyvista.core.filters',
+    'pyvista.core.formatting_html',
+    'pyvista.core.pyvista_ndarray',
+    'pyvista.core.utilities.accessor_registry',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.misc',
+    'pyvista.core.utilities.points',
+    'pyvista.typing.mypy_plugin',
+    'pyvista_validation',
+    'typing',
+]
+
 from collections import defaultdict
 from collections.abc import Iterable
 from collections.abc import Mapping

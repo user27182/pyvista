@@ -2,6 +2,23 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'itertools',
+    'numpy',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'pyvista.core.filters',
+    'pyvista.core.filters.data_object',
+    'pyvista.core.filters.data_set',
+    'pyvista.core.utilities._strip',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.misc',
+    'pyvista_validation',
+    'typing',
+]
+
 import itertools
 from typing import TYPE_CHECKING
 from typing import Literal

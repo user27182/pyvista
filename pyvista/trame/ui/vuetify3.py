@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'trame_pyvista.ui.vuetify3',
+]
+
 from trame_pyvista.ui.vuetify3 import Viewer
 from trame_pyvista.ui.vuetify3 import button
 from trame_pyvista.ui.vuetify3 import checkbox

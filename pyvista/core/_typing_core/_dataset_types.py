@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'typing',
+]
+
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import TypeVar

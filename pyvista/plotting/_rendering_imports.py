@@ -9,6 +9,12 @@ ordering is a plain ``import`` rather than E402-triggering top-level statements.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'contextlib',
+    'importlib',
+    'pyvista',
+]
+
 import contextlib
 import importlib
 

@@ -8,6 +8,15 @@ Works in Jupyter Notebook, JupyterLab, VS Code, Colab, and nbviewer.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'functools',
+    'html',
+    'importlib.resources',
+    're',
+    'typing',
+    'uuid',
+]
+
 import functools
 import html
 from importlib.resources import files as _resources_files

@@ -12,6 +12,16 @@ Examples
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'math',
+    'numpy',
+    'os',
+    'pathlib',
+    'pyvista',
+    'pyvista.examples._dataset_loader',
+    'typing',
+]
+
 import math
 import os
 from pathlib import Path

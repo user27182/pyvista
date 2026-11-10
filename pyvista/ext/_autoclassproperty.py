@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'inspect',
+    'pyvista.core.utilities.misc',
+    'sphinx.ext.autosummary',
+    'sphinx.util.inspect',
+    'typing',
+]
+
 import inspect
 from typing import TYPE_CHECKING
 from typing import Any

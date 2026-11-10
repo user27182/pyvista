@@ -2,6 +2,25 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'abc',
+    'collections.abc',
+    'itertools',
+    'json',
+    'numpy',
+    'pathlib',
+    'pyvista',
+    'pyvista._version',
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.misc',
+    'pyvista.core.utilities.observers',
+    'pyvista_validation',
+    'typing',
+    'urllib.parse',
+]
+
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import Sequence

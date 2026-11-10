@@ -6,6 +6,23 @@ Also includes some pure-python helpers.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'enum',
+    'numpy',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core._typing_core',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.errors',
+    'pyvista.core.filters',
+    'pyvista.core.formatting_html',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.misc',
+    'pyvista_validation',
+    'typing',
+]
+
 from enum import IntEnum
 from typing import TYPE_CHECKING
 from typing import Any

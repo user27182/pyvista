@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'enum',
+    'numpy',
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.colors',
+    'pyvista_validation',
+    'typing',
+]
+
 from enum import IntEnum
 from typing import TYPE_CHECKING
 

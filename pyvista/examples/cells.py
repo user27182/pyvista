@@ -7,6 +7,16 @@ be used to learn about VTK :class:`cell types <pyvista.CellType>`.
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections.abc',
+    'itertools',
+    'numpy',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista_validation',
+    'typing',
+]
+
 from collections.abc import Iterable
 from collections.abc import Sequence
 import itertools

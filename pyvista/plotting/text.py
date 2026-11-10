@@ -2,6 +2,20 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pathlib',
+    'pyvista',
+    'pyvista.core._typing_core',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.colors',
+    'pyvista.plotting.prop3d',
+    'pyvista.plotting.themes',
+    'pyvista.plotting.tools',
+    'pyvista_validation',
+    'typing',
+]
+
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Literal

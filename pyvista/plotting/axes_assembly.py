@@ -2,6 +2,26 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'abc',
+    'collections.abc',
+    'functools',
+    'itertools',
+    'numpy',
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.formatting_html',
+    'pyvista.core.utilities.geometric_sources',
+    'pyvista.core.utilities.misc',
+    'pyvista.core.utilities.transformations',
+    'pyvista.plotting.actor',
+    'pyvista.plotting.colors',
+    'pyvista.plotting.prop3d',
+    'pyvista.plotting.text',
+    'pyvista_validation',
+    'typing',
+]
+
 from abc import abstractmethod
 from collections.abc import Sequence
 import functools

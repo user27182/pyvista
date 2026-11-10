@@ -2,6 +2,20 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'enum',
+    'numpy',
+    'os',
+    'platform',
+    'pyvista',
+    'pyvista.core.errors',
+    'pyvista.plotting.colors',
+    'pyvista_validation',
+    'subprocess',
+    'sys',
+    'typing',
+]
+
 from enum import Enum
 import os
 import platform

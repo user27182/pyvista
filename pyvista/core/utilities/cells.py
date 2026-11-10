@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections',
+    'itertools',
+    'numpy',
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'typing',
+]
+
 from collections import deque
 import itertools
 from typing import TYPE_CHECKING

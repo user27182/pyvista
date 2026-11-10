@@ -2,6 +2,24 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections',
+    'contextlib',
+    'functools',
+    'inspect',
+    'logging',
+    'numpy',
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.errors',
+    'pyvista.plotting.interactor_style_registry',
+    'pyvista.plotting.opts',
+    'time',
+    'typing',
+    'weakref',
+]
+
 from collections import defaultdict
 import contextlib
 import functools

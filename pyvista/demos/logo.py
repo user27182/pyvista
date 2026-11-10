@@ -16,6 +16,17 @@ plot_logo(screenshot='pyvista_logo_sm_sq.png', window_size=(960, 960), cpos=cpos
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'numpy',
+    'os',
+    'pathlib',
+    'pyvista',
+    'pyvista._version',
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'typing',
+]
+
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING

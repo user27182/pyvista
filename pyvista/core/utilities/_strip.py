@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'functools',
+    'numpy',
+    'pyvista',
+    'typing',
+]
+
 import functools
 from typing import TYPE_CHECKING
 

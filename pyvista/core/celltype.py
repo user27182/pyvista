@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'enum',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.errors',
+    'textwrap',
+    'types',
+    'typing',
+]
+
 from enum import EnumMeta
 from enum import IntEnum
 import textwrap

@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.actor',
+    'pyvista.plotting.axes_actor',
+    'typing',
+]
+
 from typing import TYPE_CHECKING
 
 from pyvista import _vtk

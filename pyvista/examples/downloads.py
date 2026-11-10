@@ -23,6 +23,26 @@ Examples
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'contextlib',
+    'functools',
+    'importlib.util',
+    'logging',
+    'numpy',
+    'os',
+    'pathlib',
+    'pooch',
+    'pyvista',
+    'pyvista._warn_external',
+    'pyvista.core.errors',
+    'pyvista.core.filters',
+    'pyvista.core.utilities.fileio',
+    'pyvista.examples._dataset_loader',
+    'shutil',
+    'sys',
+    'typing',
+]
+
 import contextlib
 import functools
 import importlib.util

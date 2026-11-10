@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'cyclopts',
+    'pathlib',
+    'pyvista',
+    'pyvista._cli.app',
+    'pyvista._cli.utils',
+    'pyvista.core.utilities.fileio',
+    'rich.progress',
+    'typing',
+]
+
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Annotated

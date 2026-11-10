@@ -2,6 +2,19 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'matplotlib',
+    'numpy',
+    'pyvista',
+    'pyvista.core._vtk_utilities',
+    'pyvista.core.formatting_html',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.misc',
+    'pyvista.plotting.colors',
+    'pyvista.plotting.tools',
+    'typing',
+]
+
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
