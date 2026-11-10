@@ -3424,9 +3424,14 @@ class DataSet(_BoundsSizeMixin, DataSetFilters, DataObject):
             # Fast path for gridded types
             return self.max_cell_dimensionality
 
-        # Align points first to make rank computation more robust
-        aligned_points = self.align_xyz().points
-        return int(np.linalg.matrix_rank(aligned_points))  # type: ignore[return-value]
+        # Float32 Gram eigenvalues resolve too little spread, so decompose in double
+        points = np.asarray(self.points, dtype=np.float64)
+        _, std = pv.principal_axes(points, return_std=True)
+        spread = std * np.sqrt(self.n_points)
+        # Floor: coordinate rounding, and the sqrt(eps) resolution of Gram eigenvalues
+        noise = np.finfo(self.points.dtype).eps * np.abs(points).max() * np.sqrt(self.n_points)
+        floor = max(noise, 1e-7 * spread[0])
+        return int(np.count_nonzero(spread > floor))  # type: ignore[return-value]
 
     @property
     def max_cell_dimensionality(self: Self) -> _Dimensionality:

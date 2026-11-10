@@ -1894,6 +1894,21 @@ def test_dimensionality():
     assert mixed_grid.min_cell_dimensionality == 0
 
 
+@pytest.mark.parametrize('offset', [0.0, 1e3, 1e6])
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+@pytest.mark.parametrize(
+    ('directions', 'expected'),
+    [([], 0), ([[3.0, 2, 1]], 1), ([[3.0, 2, 1], [-1.0, 2, 0]], 2)],
+    ids=['coincident', 'collinear', 'planar'],
+)
+def test_dimensionality_away_from_origin(offset, dtype, directions, expected):
+    rng = np.random.default_rng(0)
+    weights = rng.random((50, len(directions)))
+    points = np.full((50, 3), offset) + weights @ np.reshape(directions, (-1, 3))
+    mesh = pv.PointSet(points.astype(dtype))
+    assert mesh.dimensionality == expected
+
+
 @pytest.mark.parametrize('empty', [True, False])
 def test_min_max_cell_dimensionality(datasets, empty):
     for mesh in datasets:
