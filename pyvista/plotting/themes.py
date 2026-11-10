@@ -3703,7 +3703,7 @@ class DarkTheme(Theme):
         """Initialize the theme."""
         super().__init__()
         self.background = 'black'
-        self.cmap = 'viridis'
+        self._cmap = 'viridis'
         self.font.color = 'white'
         self.font.title_size = 18
         self.font.label_size = 18
@@ -3740,7 +3740,7 @@ class ParaViewTheme(Theme):
         """Initialize theme."""
         super().__init__()
         self.background = 'paraview'
-        self.cmap = 'coolwarm'
+        self._cmap = 'coolwarm'
         self.font.family = 'arial'
         self.font.title_size = 16
         self.font.label_size = 16
@@ -3788,7 +3788,7 @@ class DocumentTheme(Theme):
         """Initialize the theme."""
         super().__init__()
         self.background = 'white'
-        self.cmap = 'viridis'
+        self._cmap = 'viridis'
         self.font.size = 18
         self.font.title_size = 18
         self.font.label_size = 18

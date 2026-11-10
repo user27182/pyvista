@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista.plotting.utilities.algorithms',
+    'pyvista.plotting.utilities.gl_checks',
+    'pyvista.plotting.utilities.regression',
+    'pyvista.plotting.utilities.sphinx_gallery',
+]
+
 from .algorithms import active_scalars_algorithm as active_scalars_algorithm
 from .algorithms import add_ids_algorithm as add_ids_algorithm
 from .algorithms import algorithm_to_mesh_handler as algorithm_to_mesh_handler

@@ -13,8 +13,8 @@ import pytest
 
 import pyvista as pv
 from pyvista import _vtk
+from pyvista.core._vtk_object_wrapper import VTKObjectWrapperCheckSnakeCase
 from pyvista.core._vtk_utilities import DisableVtkSnakeCase
-from pyvista.core._vtk_utilities import VTKObjectWrapperCheckSnakeCase
 from pyvista.core._vtk_utilities import vtkPyVistaOverride
 from pyvista.core.errors import PyVistaAttributeError
 from pyvista.core.errors import VTKVersionError

@@ -14,8 +14,8 @@ __lazy_modules__ = [
     'functools',
     'importlib',
     'inspect',
+    'matplotlib',
     'matplotlib.colors',
-    'matplotlib.pyplot',
     'numpy',
     'pyvista',
     'pyvista._warn_external',
@@ -39,8 +39,9 @@ from typing import overload
 
 from cycler import Cycler
 from cycler import cycler
+import matplotlib as mpl
+from matplotlib import colors
 from matplotlib.colors import ListedColormap
-import matplotlib.pyplot as plt
 import numpy as np
 import pyvista_validation as _validation
 
@@ -51,15 +52,6 @@ from pyvista.core.errors import PyVistaDeprecationWarning
 from pyvista.core.utilities.misc import _linear_to_srgb
 from pyvista.core.utilities.misc import _NoNewAttrMixin
 from pyvista.core.utilities.misc import _srgb_to_linear
-
-try:
-    from matplotlib import colormaps
-    from matplotlib import colors
-except ImportError:  # pragma: no cover
-    # typing for newer versions of matplotlib
-    # in newer versions cm is a module
-    from matplotlib import cm as colormaps  # type: ignore[assignment]
-    from matplotlib import colors
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -2357,11 +2349,16 @@ def _validate_color_sequence(
     raise ValueError(msg)
 
 
+def _matplotlib_colormaps() -> Any:
+    """Return matplotlib's colormap registry, or the ``cm`` module before matplotlib 3.5."""
+    return getattr(mpl, 'colormaps', None) or importlib.import_module('matplotlib.cm')
+
+
 @functools.cache
 def _get_matplotlib_cmap(name: str) -> colors.Colormap:
     """Fetch a matplotlib colormap by name, keeping one built instance per name."""
     try:
-        cmap_obj = colormaps[name]
+        cmap_obj = _matplotlib_colormaps()[name]
     except KeyError:
         msg = f"Invalid colormap '{name}'"
         raise ValueError(msg) from None
@@ -2444,6 +2441,7 @@ def get_cmap_safe(cmap: ColormapOptions) -> colors.Colormap:
         cmap_3rd_party = get_3rd_party_cmap(name)
         if cmap_3rd_party is not None:
             return cmap_3rd_party
+        colormaps = _matplotlib_colormaps()
         if inspect.ismodule(colormaps):  # pragma: no cover
             # Backwards compatibility with matplotlib<3.5.0
             if not hasattr(colormaps, name):
@@ -2500,7 +2498,7 @@ def get_matplotlib_theme_cycler() -> Cycler[str, Any]:
         Color cycler of the current matplotlib theme.
 
     """
-    return plt.rcParams['axes.prop_cycle']
+    return mpl.rcParams['axes.prop_cycle']
 
 
 def color_scheme_to_cycler(scheme: str | int | _vtk.vtkColorSeries) -> Cycler[str, Any]:

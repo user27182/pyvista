@@ -2,10 +2,54 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista',
+    'pyvista._plot',
+    'pyvista.plotting',
+    'pyvista.plotting._property',
+    'pyvista.plotting.actor',
+    'pyvista.plotting.actor_properties',
+    'pyvista.plotting.affine_widget',
+    'pyvista.plotting.axes',
+    'pyvista.plotting.axes_actor',
+    'pyvista.plotting.axes_assembly',
+    'pyvista.plotting.camera',
+    'pyvista.plotting.charts',
+    'pyvista.plotting.colors',
+    'pyvista.plotting.component_registry',
+    'pyvista.plotting.composite_mapper',
+    'pyvista.plotting.cube_axes_actor',
+    'pyvista.plotting.errors',
+    'pyvista.plotting.follower',
+    'pyvista.plotting.helpers',
+    'pyvista.plotting.interactor_style_registry',
+    'pyvista.plotting.lights',
+    'pyvista.plotting.lookup_table',
+    'pyvista.plotting.mapper',
+    'pyvista.plotting.opts',
+    'pyvista.plotting.picking',
+    'pyvista.plotting.plotter',
+    'pyvista.plotting.prop3d',
+    'pyvista.plotting.render_window_interactor',
+    'pyvista.plotting.renderer',
+    'pyvista.plotting.text',
+    'pyvista.plotting.texture',
+    'pyvista.plotting.theme_registry',
+    'pyvista.plotting.themes',
+    'pyvista.plotting.tools',
+    'pyvista.plotting.utilities',
+    'pyvista.plotting.utilities.sphinx_gallery',
+    'pyvista.plotting.volume',
+    'pyvista.plotting.volume_property',
+    'pyvista.plotting.widgets',
+    'pyvista.typing',
+    'typing',
+]
+
 # isort: off
 # Must come first: registers the VTK rendering factories (and LaTeX support) via
 # the active backend before any rendering class below is imported.
-from . import _rendering_imports as _rendering_imports
+import pyvista.plotting._rendering_imports  # noqa: F401  # eager: registers rendering factories
 
 # isort: on
 
@@ -98,7 +142,35 @@ from .tools import normalize as normalize
 from .tools import opacity_transfer_function as opacity_transfer_function
 from .tools import parse_font_family as parse_font_family
 from .tools import system_supports_plotting as system_supports_plotting
-from .utilities import *
+from .utilities import Scraper as Scraper
+from .utilities import active_scalars_algorithm as active_scalars_algorithm
+from .utilities import add_ids_algorithm as add_ids_algorithm
+from .utilities import algorithm_to_mesh_handler as algorithm_to_mesh_handler
+from .utilities import algorithms as algorithms
+from .utilities import callback_algorithm as callback_algorithm
+from .utilities import cell_data_to_point_data_algorithm as cell_data_to_point_data_algorithm
+from .utilities import check_depth_peeling as check_depth_peeling
+from .utilities import compare_images as compare_images
+from .utilities import crinkle_algorithm as crinkle_algorithm
+from .utilities import cubemap as cubemap
+from .utilities import cubemap_from_filenames as cubemap_from_filenames
+from .utilities import decimation_algorithm as decimation_algorithm
+from .utilities import extract_surface_algorithm as extract_surface_algorithm
+from .utilities import gl_checks as gl_checks
+from .utilities import image_from_window as image_from_window
+from .utilities import outline_algorithm as outline_algorithm
+from .utilities import point_data_to_cell_data_algorithm as point_data_to_cell_data_algorithm
+from .utilities import pointset_to_polydata_algorithm as pointset_to_polydata_algorithm
+from .utilities import regression as regression
+from .utilities import remove_alpha as remove_alpha
+from .utilities import run_image_filter as run_image_filter
+from .utilities import set_algorithm_input as set_algorithm_input
+from .utilities import smooth_shading_algorithm as smooth_shading_algorithm
+from .utilities import source_algorithm as source_algorithm
+from .utilities import sphinx_gallery as sphinx_gallery
+from .utilities import triangulate_algorithm as triangulate_algorithm
+from .utilities import uses_egl as uses_egl
+from .utilities import wrap_image_array as wrap_image_array
 from .utilities.sphinx_gallery import _get_sg_image_scraper as _get_sg_image_scraper
 from .volume import Volume as Volume
 from .volume_property import VolumeProperty as VolumeProperty

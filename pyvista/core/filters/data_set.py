@@ -10,8 +10,8 @@ __lazy_modules__ = [
     'operator',
     'pyvista',
     'pyvista._version',
+    'pyvista._vtk_version',
     'pyvista._warn_external',
-    'pyvista.core._vtk_utilities',
     'pyvista.core.errors',
     'pyvista.core.filters',
     'pyvista.core.filters.data_object',
@@ -47,8 +47,8 @@ import pyvista_validation as _validation
 import pyvista as pv
 from pyvista import _vtk
 from pyvista._version import _is_deprecation_due
+from pyvista._vtk_version import vtk_version_info
 from pyvista._warn_external import warn_external
-from pyvista.core._vtk_utilities import vtk_version_info
 from pyvista.core.errors import AmbiguousDataError
 from pyvista.core.errors import DeprecationError
 from pyvista.core.errors import MissingDataError

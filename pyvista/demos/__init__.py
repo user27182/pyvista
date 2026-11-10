@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista.demos.demos',
+    'pyvista.demos.logo',
+]
+
 from pyvista.demos.demos import glyphs as glyphs
 from pyvista.demos.demos import orientation_cube as orientation_cube
 from pyvista.demos.demos import orientation_plotter as orientation_plotter

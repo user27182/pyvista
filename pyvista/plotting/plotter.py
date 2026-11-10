@@ -9017,7 +9017,7 @@ class Plotter(_NoNewAttrMixin, BasePlotter):
             if self._theme.notebook is not None:
                 notebook = self._theme.notebook
             else:
-                notebook = scooby.in_ipykernel()
+                notebook = 'ipykernel' in sys.modules and scooby.in_ipykernel()
 
         self.notebook = notebook
         if self.notebook or pv.ON_SCREENSHOT:

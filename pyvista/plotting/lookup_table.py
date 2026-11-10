@@ -6,6 +6,7 @@ __lazy_modules__ = [
     'matplotlib',
     'numpy',
     'pyvista',
+    'pyvista.core._vtk_object_wrapper',
     'pyvista.core._vtk_utilities',
     'pyvista.core.formatting_html',
     'pyvista.core.utilities.arrays',
@@ -26,8 +27,8 @@ import numpy as np
 
 import pyvista as pv
 from pyvista import _vtk
+from pyvista.core._vtk_object_wrapper import VTKObjectWrapperCheckSnakeCase
 from pyvista.core._vtk_utilities import DisableVtkSnakeCase
-from pyvista.core._vtk_utilities import VTKObjectWrapperCheckSnakeCase
 from pyvista.core.formatting_html import _TextReprHTMLMixin
 from pyvista.core.utilities.arrays import convert_array
 from pyvista.core.utilities.misc import _NoNewAttrMixin

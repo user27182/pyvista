@@ -5,6 +5,7 @@ from __future__ import annotations
 __lazy_modules__ = [
     'functools',
     'pyvista',
+    'pyvista._vtk_version',
     'pyvista._warn_external',
     'pyvista.core.config',
     'pyvista.core.errors',
@@ -17,90 +18,18 @@ import sys
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
-from typing import NamedTuple
 
 from pyvista import _vtk
+from pyvista._vtk_version import vtk_version_info
 from pyvista._warn_external import warn_external
 from pyvista.core.config import global_config
 from pyvista.core.errors import PyVistaAttributeError
-from pyvista.core.errors import VTKVersionError
 
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
 # A wrapped VTK class' ``__module__`` is rooted at the active backend; accept both.
 _VTK_MODULE_PREFIXES = tuple({'vtkmodules.', f'{_vtk._VTK_ROOT}.'})
-
-
-class VersionInfo(NamedTuple):
-    """Version information as a named tuple."""
-
-    major: int
-    minor: int
-    micro: int
-
-    def __str__(self) -> str:
-        return str((self.major, self.minor, self.micro))
-
-    @staticmethod
-    def _format(version: tuple[int, ...]) -> str:
-        return '.'.join(map(str, version))
-
-
-def _get_vtk_version() -> VersionInfo:
-    """Return the vtk version as a namedtuple.
-
-    Returns
-    -------
-    VersionInfo
-        Version information as a named tuple.
-
-    """
-    try:
-        ver = _vtk.vtkVersion()
-        major = ver.GetVTKMajorVersion()
-        minor = ver.GetVTKMinorVersion()
-        micro = ver.GetVTKBuildVersion()
-    except AttributeError:  # pragma: no cover
-        msg = (
-            f'Unable to detect VTK version. '
-            f'Defaulting to {VersionInfo._format(_MIN_SUPPORTED_VTK_VERSION)}'
-        )
-        warn_external(msg)
-        major, minor, micro = _MIN_SUPPORTED_VTK_VERSION
-    return VersionInfo(major, minor, micro)
-
-
-class VTKVersionInfo(VersionInfo):
-    """Version info which rejects comparisons against unsupported VTK versions."""
-
-    def _check_min_supported(self, other: tuple[int, ...]) -> None:
-        if isinstance(other, tuple) and other < _MIN_SUPPORTED_VTK_VERSION:  # type: ignore[redundant-expr]
-            msg = (
-                f'Comparing against unsupported VTK version {VersionInfo._format(other):}. '
-                f'Minimum supported is {VersionInfo._format(_MIN_SUPPORTED_VTK_VERSION):}.'
-            )
-            raise VTKVersionError(msg)
-
-    def __lt__(self, other: tuple[int, ...]) -> bool:
-        self._check_min_supported(other)
-        return super().__lt__(other)
-
-    def __le__(self, other: tuple[int, ...]) -> bool:
-        self._check_min_supported(other)
-        return super().__le__(other)
-
-    def __gt__(self, other: tuple[int, ...]) -> bool:
-        self._check_min_supported(other)
-        return super().__gt__(other)
-
-    def __ge__(self, other: tuple[int, ...]) -> bool:
-        self._check_min_supported(other)
-        return super().__ge__(other)
-
-
-vtk_version_info = VTKVersionInfo(*_get_vtk_version())
-_MIN_SUPPORTED_VTK_VERSION = (9, 3, 1)
 
 
 def vtk_backend() -> str:
@@ -324,19 +253,3 @@ def is_vtk_attribute(obj: object, attr: str) -> bool:  # numpydoc ignore=RT01
 @functools.cache
 def _is_vtk_attribute_cached(target_type: type, attr: str) -> bool:
     return is_vtk_attribute(target_type, attr)
-
-
-class VTKObjectWrapperCheckSnakeCase(_vtk.VTKObjectWrapper):
-    """Superclass for classes that wrap VTK objects with Python objects.
-
-    This class overrides ``__getattr__`` to disable the VTK snake case API.
-    """
-
-    def __getattr__(self, name: str) -> Any:
-        """Forward unknown attribute requests to the wrapped VTK object."""
-        if self.VTKObject is not None:
-            # Check if forwarding snake_case attributes
-            DisableVtkSnakeCase.check_attribute(self.VTKObject, name)
-            return getattr(self.VTKObject, name)
-        msg = f'{type(self).__name__!r} object has no attribute {name!r}'
-        raise AttributeError(msg)

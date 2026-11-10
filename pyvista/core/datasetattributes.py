@@ -7,6 +7,7 @@ __lazy_modules__ = [
     'copy',
     'numpy',
     'pyvista',
+    'pyvista.core._vtk_object_wrapper',
     'pyvista.core._vtk_utilities',
     'pyvista.core.formatting_html',
     'pyvista.core.pyvista_ndarray',
@@ -25,8 +26,8 @@ from typing import overload
 import numpy as np
 
 from pyvista import _vtk
+from pyvista.core._vtk_object_wrapper import VTKObjectWrapperCheckSnakeCase
 from pyvista.core._vtk_utilities import DisableVtkSnakeCase
-from pyvista.core._vtk_utilities import VTKObjectWrapperCheckSnakeCase
 
 from .formatting_html import _data_array_section
 from .formatting_html import build_repr_html

@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista.core._typing_core._aliases',
+    'pyvista.core._typing_core._array_types',
+    'pyvista.core._typing_core._dataset_types',
+    'pyvista_validation.typing',
+]
+
 from pyvista_validation.typing import ArrayLikeBool as ArrayLikeBool
 from pyvista_validation.typing import ArrayLikeFloat as ArrayLikeFloat
 from pyvista_validation.typing import ArrayLikeInt as ArrayLikeInt

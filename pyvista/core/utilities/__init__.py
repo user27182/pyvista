@@ -2,6 +2,29 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'pyvista.core.utilities.accessor_registry',
+    'pyvista.core.utilities.arrays',
+    'pyvista.core.utilities.cell_quality',
+    'pyvista.core.utilities.cells',
+    'pyvista.core.utilities.features',
+    'pyvista.core.utilities.fileio',
+    'pyvista.core.utilities.geometric_objects',
+    'pyvista.core.utilities.geometric_sources',
+    'pyvista.core.utilities.helpers',
+    'pyvista.core.utilities.image_sources',
+    'pyvista.core.utilities.misc',
+    'pyvista.core.utilities.observers',
+    'pyvista.core.utilities.parametric_objects',
+    'pyvista.core.utilities.points',
+    'pyvista.core.utilities.reader',
+    'pyvista.core.utilities.reader_registry',
+    'pyvista.core.utilities.state_manager',
+    'pyvista.core.utilities.transform',
+    'pyvista.core.utilities.writer',
+    'pyvista.core.utilities.writer_registry',
+]
+
 from .accessor_registry import AccessorRegistration as AccessorRegistration
 from .accessor_registry import DataSetAccessor as DataSetAccessor
 from .accessor_registry import register_dataset_accessor as register_dataset_accessor

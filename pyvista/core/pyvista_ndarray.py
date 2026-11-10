@@ -6,7 +6,7 @@ __lazy_modules__ = [
     'collections.abc',
     'numpy',
     'pyvista',
-    'pyvista.core._vtk_utilities',
+    'pyvista.core._vtk_object_wrapper',
     'pyvista.core.utilities.arrays',
     'pyvista.core.utilities.misc',
     'typing',
@@ -19,7 +19,7 @@ from typing import cast
 import numpy as np
 
 from pyvista import _vtk
-from pyvista.core._vtk_utilities import VTKObjectWrapperCheckSnakeCase
+from pyvista.core._vtk_object_wrapper import VTKObjectWrapperCheckSnakeCase
 
 from .utilities.arrays import FieldAssociation
 from .utilities.arrays import _vtk_array_to_numpy

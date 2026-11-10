@@ -7,6 +7,7 @@ __lazy_modules__ = [
     'collections.abc',
     'numpy',
     'pyvista',
+    'pyvista.core.utilities',
     'pyvista.core.utilities.fileio',
     'pyvista_validation',
     'typing',
@@ -28,7 +29,7 @@ from typing_extensions import TypeIs
 import pyvista as pv
 from pyvista import _vtk
 
-from . import transformations  # eager: loading it exposes pyvista.transformations
+from . import transformations
 from .fileio import from_meshio
 from .fileio import from_trimesh
 from .fileio import is_meshio_mesh

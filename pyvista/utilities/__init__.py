@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'importlib',
+    'inspect',
+    'pyvista._warn_external',
+]
+
 import importlib
 import inspect
 

@@ -11,8 +11,8 @@ __lazy_modules__ = [
     'pathlib',
     'pyvista',
     'pyvista._version',
+    'pyvista._vtk_version',
     'pyvista._warn_external',
-    'pyvista.core._vtk_utilities',
     'pyvista.core.errors',
     'pyvista.core.filters',
     'pyvista.core.utilities',
@@ -50,8 +50,8 @@ import numpy as np
 import pyvista as pv
 from pyvista import _vtk
 from pyvista._version import _is_deprecation_due
+from pyvista._vtk_version import VersionInfo
 from pyvista._warn_external import warn_external
-from pyvista.core._vtk_utilities import VersionInfo
 from pyvista.core.errors import PyVistaDeprecationWarning
 from pyvista.core.filters import _update_alg
 
