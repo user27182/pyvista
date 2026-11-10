@@ -1894,6 +1894,50 @@ def test_dimensionality():
     assert mixed_grid.min_cell_dimensionality == 0
 
 
+@pytest.mark.parametrize('offset', [0.0, 1e3, 1e6])
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+@pytest.mark.parametrize(
+    ('directions', 'expected'),
+    [([], 0), ([[3.0, 2, 1]], 1), ([[3.0, 2, 1], [-1.0, 2, 0]], 2)],
+    ids=['coincident', 'collinear', 'planar'],
+)
+def test_dimensionality_away_from_origin(offset, dtype, directions, expected):
+    rng = np.random.default_rng(0)
+    weights = rng.random((50, len(directions)))
+    points = np.full((50, 3), offset) + weights @ np.reshape(directions, (-1, 3))
+    mesh = pv.PointSet(points.astype(dtype))
+    assert mesh.dimensionality == expected
+
+
+def _line_with_jitter(offset, half_length, jitter):
+    """Return points along x with an alternating y offset of ``jitter``."""
+    n_points = 50
+    x = np.linspace(-half_length, half_length, n_points)
+    y = jitter * np.tile([1.0, -1.0], n_points // 2)
+    return np.c_[x, y, np.zeros(n_points)] + offset
+
+
+@pytest.mark.parametrize(('factor', 'expected'), [(0.1, 1), (10, 2)])
+def test_dimensionality_relative_floor(factor, expected):
+    # Near the origin the 1e-7 relative floor dominates the rounding noise
+    spread_x = np.linspace(-1, 1, 50).std()
+    points = _line_with_jitter(0.0, 1.0, factor * 1e-7 * spread_x)
+    assert pv.PointSet(points).dimensionality == expected
+
+
+@pytest.mark.parametrize(
+    ('ulps', 'dtype', 'expected'),
+    [(1, np.float32, 1), (1, np.float64, 2), (16, np.float32, 2), (16, np.float64, 2)],
+)
+def test_dimensionality_noise_floor(ulps, dtype, expected):
+    # The same exactly representable values are noise in float32 but signal in float64
+    float32_ulp = 2.0**-13  # spacing of float32 values in [1024, 2048)
+    points = _line_with_jitter(1500.0, 520.0, ulps * float32_ulp)
+    mesh = pv.PointSet(points.astype(dtype))
+    assert np.array_equal(mesh.points[:, 1:], points[:, 1:])
+    assert mesh.dimensionality == expected
+
+
 @pytest.mark.parametrize('empty', [True, False])
 def test_min_max_cell_dimensionality(datasets, empty):
     for mesh in datasets:
