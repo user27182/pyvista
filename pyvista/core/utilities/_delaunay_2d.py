@@ -169,23 +169,13 @@ def _validate_input(mesh: DataSet, edge_source: PolyData | None) -> None:
 def _points_are_degenerate(mesh: DataSet, *, bound: bool) -> bool:
     """Return whether the points cannot be triangulated, warning if so.
 
-    VTK needs three points. The singular values of the centered points are their spread
-    along and off the best line, compared against a relative floor and the rounding noise
-    of the stored coordinates. Without ``bound`` the points must span a plane; with it,
-    the bounding points make collinear input triangulable, so only coincident points fail.
+    VTK needs three points spanning a plane. With ``bound`` the bounding points make
+    collinear input triangulable, so only coincident points fail.
     """
     if mesh.n_points == 0:
         return False
-    if mesh.n_points >= 3:
-        # The (n, 3) SVD is linear in n; centering the float64 copy in place saves a copy
-        points = mesh.points.astype(np.float64)
-        points -= points.mean(axis=0)
-        singular = np.linalg.svd(points, compute_uv=False)
-        # Rounding of the stored coordinates alone spreads points by about this much
-        noise = np.finfo(mesh.points.dtype).eps * np.abs(mesh.points).max()
-        floor = max(1e-10 * singular[0], noise * np.sqrt(mesh.n_points))
-        if np.count_nonzero(singular > floor) >= (1 if bound else 2):
-            return False
+    if mesh.n_points >= 3 and mesh.dimensionality >= (1 if bound else 2):
+        return False
     warn_external(
         'The points cannot be triangulated, so the output has no cells. There must be at '
         'least three points, and they must not all coincide or lie on one line.'
