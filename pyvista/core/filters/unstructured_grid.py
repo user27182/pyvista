@@ -26,9 +26,16 @@ class UnstructuredGridFilters(DataSetFilters):
     """An internal class to manage filters/algorithms for unstructured grid datasets."""
 
     @_wraps(PolyDataFilters.delaunay_2d)
-    def delaunay_2d(self, *args, **kwargs) -> PolyData:  # numpydoc ignore=PR01,RT01
+    def delaunay_2d(
+        self: UnstructuredGrid, *args, **kwargs
+    ) -> PolyData:  # numpydoc ignore=PR01,RT01
         """Wrap ``PolyDataFilters.delaunay_2d``."""
-        return PolyDataFilters.delaunay_2d(self, *args, **kwargs)  # type: ignore[arg-type]
+        inplace = kwargs.pop('inplace', False)
+        output = PolyDataFilters.delaunay_2d(self, *args, **kwargs)  # type: ignore[arg-type]
+        if not inplace:
+            return output
+        self.copy_from(output.cast_to_unstructured_grid(), deep=False)
+        return self  # type: ignore[return-value]
 
     @_wraps(PolyDataFilters.reconstruct_surface)
     def reconstruct_surface(self, *args, **kwargs) -> PolyData:  # numpydoc ignore=PR01,RT01
